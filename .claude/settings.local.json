@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /b)",
+      "Bash(python -c \"import django; print\\(django.get_version\\(\\)\\)\")",
+      "PowerShell(& \"d:\\\\Projects\\\\django pratice\\\\venv\\\\Scripts\\\\python.exe\" --version)",
+      "PowerShell(& \"d:\\\\Projects\\\\django pratice\\\\venv\\\\Scripts\\\\python.exe\" -c \"import django; print\\(django.get_version\\(\\)\\)\")",
+      "Bash(unzip -o SRS.docx -d /tmp/srs_extract)",
+      "Read(//tmp/srs_extract/word/**)",
+      "Read(//tmp/**)",
+      "Bash(cygpath -w /tmp/srs_extract)",
+      "PowerShell(& \"d:\\\\Projects\\\\django pratice\\\\venv\\\\Scripts\\\\python.exe\" \"C:\\\\Users\\\\ACER\\\\AppData\\\\Local\\\\Temp\\\\read_srs.py\")",
+      "Bash(rm -f _doc.py)",
+      "Bash(ls _*.py)",
+      "Bash(rm -f _dbg3.py _dbg2.py _dbg.py _pe.py)"
+    ]
+  }
+}

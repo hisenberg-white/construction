@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load i18n form_extras %}
+{% block title %}{% trans "Ledger" %} — DepotLedger{% endblock %}
+{% block content %}
+
+<form method="get" class="card shadow-sm mb-3 dl-no-print" style="max-width:960px;margin:0 auto;">
+  <div class="card-body row g-2 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label">{% trans "Account" %}</label>
+      <select name="account" class="form-select">
+        {% for val, label in account_options %}
+          <option value="{{ val }}"{% if val == account %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">{% trans "From" %}</label>
+      <input type="date" name="from" value="{{ date_from|date:'Y-m-d' }}" class="form-control">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">{% trans "To" %}</label>
+      <input type="date" name="to" value="{{ date_to|date:'Y-m-d' }}" class="form-control">
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-primary w-100"><i class="bi bi-funnel"></i> {% trans "Filter" %}</button>
+    </div>
+  </div>
+</form>
+
+{% if pl %}
+<div class="dl-document">
+  {% include 'core/_doc_header.html' with company=company doc_title="Profit & Loss" doc_subtitle=account_label %}
+  <div class="text-muted small mb-2">
+    {% if use_bs %}{{ date_from|npdate:False }} → {{ date_to|npdate:False }} (BS){% else %}{{ date_from }} → {{ date_to }}{% endif %}
+  </div>
+  <table class="dl-doc-totals">
+    <tr><td>{% trans "Sales revenue" %}</td><td class="text-end">{{ pl_sales }}</td></tr>
+    <tr><td>{% trans "Less: Purchases" %}</td><td class="text-end">− {{ pl_purchase }}</td></tr>
+    <tr><td>{% trans "Less: Expenses" %}</td><td class="text-end">− {{ pl_expense }}</td></tr>
+    <tr class="fw-bold border-top">
+      <td>{% trans "Net Profit / (Loss)" %}</td>
+      <td class="text-end {% if pl_net < 0 %}text-danger{% else %}text-success{% endif %}">{{ pl_net }}</td>
+    </tr>
+  </table>
+</div>
+{% else %}
+<div class="dl-document">
+  {% include 'core/_doc_header.html' with company=company doc_title="Ledger" doc_subtitle=account_label %}
+  <div class="text-muted small mb-2">
+    {% if use_bs %}{{ date_from|npdate:False }} → {{ date_to|npdate:False }} (BS){% else %}{{ date_from }} → {{ date_to }}{% endif %}
+  </div>
+  <div class="table-responsive">
+    <table class="table table-bordered mb-0 align-middle" style="font-variant-numeric:tabular-nums;">
+      <thead class="table-light">
+        <tr>
+          <th style="width:120px">{% trans "Date" %}</th>
+          <th>{% trans "Particulars" %}</th>
+          <th>{% trans "Account" %}</th>
+          <th>{% trans "Reference" %}</th>
+          <th class="text-end">{% trans "Debit" %}</th>
+          <th class="text-end">{% trans "Credit" %}</th>
+          <th class="text-end">{% trans "Balance" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if single_account %}
+        <tr class="table-light fst-italic">
+          <td>—</td><td>{% trans "Opening Balance" %}</td><td></td><td></td>
+          <td class="text-end"></td><td class="text-end"></td>
+          <td class="text-end">{{ opening_balance }}</td>
+        </tr>
+        {% endif %}
+        {% for e in entries %}
+        <tr>
+          <td>{% if use_bs %}{{ e.entry_date|npdate:False }}{% else %}{{ e.entry_date|date:'Y-m-d' }}{% endif %}</td>
+          <td>{{ e.description|default:'—' }}</td>
+          <td>{{ e.get_account_type_display }}{% if e.account_id %} #{{ e.account_id }}{% endif %}</td>
+          <td class="text-muted small">{{ e.reference_type|default:'' }}{% if e.reference_id %} #{{ e.reference_id }}{% endif %}</td>
+          <td class="text-end">{% if e.debit %}{{ e.debit }}{% endif %}</td>
+          <td class="text-end">{% if e.credit %}{{ e.credit }}{% endif %}</td>
+          <td class="text-end">{{ e.balance_after }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center text-muted py-4">{% trans "No ledger entries in this period." %}</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="table-light fw-bold">
+        <tr>
+          <td colspan="4" class="text-end">{% trans "Totals" %}</td>
+          <td class="text-end">{{ total_debit }}</td>
+          <td class="text-end">{{ total_credit }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

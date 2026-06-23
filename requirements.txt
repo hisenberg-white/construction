@@ -1,0 +1,19 @@
+# Core
+Django==6.0.6
+asgiref==3.11.1
+sqlparse==0.5.5
+tzdata==2026.2
+
+# Invoice PDF generation (xhtml2pdf + its dependencies)
+xhtml2pdf==0.2.17
+reportlab==4.5.1
+pillow==12.2.0
+html5lib==1.1
+pypdf==6.12.2
+svglib==1.6.0
+
+# Nepali (Bikram Sambat) date conversion
+nepali-datetime==1.0.8.5
+
+# QR codes on bills
+qrcode==8.2

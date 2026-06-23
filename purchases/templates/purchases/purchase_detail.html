@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% load i18n form_extras %}
+{% block title %}{% trans "Purchase" %} #{{ obj.pk }} — DepotLedger{% endblock %}
+{% block content %}
+
+<div class="d-flex flex-wrap justify-content-end gap-2 mb-3 dl-no-print">
+  <a class="btn btn-outline-secondary" href="{% url 'purchases:purchase_list' %}"><i class="bi bi-arrow-left"></i> {% trans "Back" %}</a>
+  <a class="btn btn-outline-dark" href="{% url 'purchases:purchase_pdf' obj.pk %}" target="_blank"><i class="bi bi-file-earmark-pdf"></i> {% trans "Download PDF" %}</a>
+  {% if can_update and available.update %}<a class="btn btn-outline-primary" href="{% url crud.update obj.pk %}"><i class="bi bi-pencil"></i> {% trans "Edit" %}</a>{% endif %}
+  {% if can_cancel and available.cancel and not obj.is_cancelled %}
+    <a class="btn btn-outline-warning" href="{% url crud.cancel obj.pk %}"><i class="bi bi-x-circle"></i> {% trans "Cancel" %}</a>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+{# === Left column: purchase details === #}
+<div class="col-lg-8">
+<div class="dl-document">
+  <div class="d-flex justify-content-end mb-1">
+    <span class="badge fs-6 text-bg-{% if obj.payment_status == 'paid' %}success{% elif obj.payment_status == 'partial' %}warning{% else %}danger{% endif %}">
+      <i class="bi bi-cash-coin me-1"></i>{{ obj.get_payment_status_display }}</span>
+  </div>
+  {% include 'core/_doc_header.html' with company=obj.tenant doc_title="Purchase" doc_subtitle=obj.reference_no qr=qr %}
+
+  {% if obj.is_cancelled %}<div class="alert alert-danger py-2"><strong>{% trans "CANCELLED" %}</strong>{% if obj.cancel_reason %} — {{ obj.cancel_reason }}{% endif %}</div>{% endif %}
+
+  <div class="row mb-3">
+    <div class="col-sm-6">
+      <div class="text-muted small text-uppercase">{% trans "Supplier" %}</div>
+      <div class="fw-bold">{{ obj.supplier.name }}</div>
+      <div class="text-muted small">
+        {% if obj.supplier.phone %}{{ obj.supplier.phone }}<br>{% endif %}{{ obj.supplier.address }}
+      </div>
+    </div>
+    <div class="col-sm-6 text-sm-end">
+      <div><span class="text-muted">{% trans "Date" %}:</span>
+        {% if use_bs %}{{ obj.purchase_date|npdate:False }} (BS){% else %}{{ obj.purchase_date|date:'Y-m-d' }}{% endif %}</div>
+      <div><span class="text-muted">{% trans "Depot" %}:</span> {{ obj.depot }}</div>
+      {% if obj.reference_no %}<div><span class="text-muted">{% trans "Reference" %}:</span> {{ obj.reference_no }}</div>{% endif %}
+    </div>
+  </div>
+
+  <table class="table table-bordered align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>{% trans "Material" %}</th><th>{% trans "Vehicle" %}</th>
+        <th class="text-end">{% trans "Qty" %}</th><th class="text-end">{% trans "Rate" %}</th>
+        <th class="text-end">{% trans "Amount" %}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>{{ obj.material }}</td>
+        <td>{{ obj.vehicle|default:'—' }}</td>
+        <td class="text-end">{{ obj.qty }}</td>
+        <td class="text-end">{{ obj.rate }}</td>
+        <td class="text-end">{{ obj.material_cost }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table class="dl-doc-totals">
+    <tr><td class="text-muted">{% trans "Material cost" %}</td><td class="text-end">{{ obj.material_cost }}</td></tr>
+    {% for ex in obj.expense_lines.all %}
+    <tr><td class="text-muted">{{ ex.category }}{% if ex.note %} <span class="small">({{ ex.note }})</span>{% endif %}</td><td class="text-end">{{ ex.amount }}</td></tr>
+    {% endfor %}
+    {% if obj.transport_cost %}<tr><td class="text-muted">{% trans "Transport" %}</td><td class="text-end">{{ obj.transport_cost }}</td></tr>{% endif %}
+    {% if obj.unloading_cost %}<tr><td class="text-muted">{% trans "Unloading" %}</td><td class="text-end">{{ obj.unloading_cost }}</td></tr>{% endif %}
+    {% if obj.other_cost %}<tr><td class="text-muted">{% trans "Other" %}</td><td class="text-end">{{ obj.other_cost }}</td></tr>{% endif %}
+    <tr class="fw-bold border-top"><td>{% trans "Total cost" %}</td><td class="text-end">{{ obj.tenant.default_currency }} {{ obj.total_cost }}</td></tr>
+    <tr><td class="text-muted">{% trans "Paid" %}</td><td class="text-end">{{ obj.paid_amount }}</td></tr>
+    <tr class="fw-bold"><td>{% trans "Due" %}</td><td class="text-end">{{ obj.due_amount }}</td></tr>
+  </table>
+
+  {% if obj.notes %}<p class="text-muted mt-3"><strong>{% trans "Notes" %}:</strong> {{ obj.notes }}</p>{% endif %}
+  {% if obj.reference_image %}
+  <div class="mt-3">
+    <div class="text-muted small text-uppercase">{% trans "Reference" %}</div>
+    <a href="{{ obj.reference_image.url }}" target="_blank">
+      <img src="{{ obj.reference_image.url }}" alt="reference" class="img-thumbnail" style="max-height:160px">
+    </a>
+  </div>
+  {% endif %}
+</div>
+</div>{# /col-lg-8 #}
+
+{# === Right column: payment log === #}
+<div class="col-lg-4">
+<div class="dl-document dl-no-print h-100">
+  <div class="d-flex justify-content-between align-items-center">
+    <h2 class="h6 text-muted text-uppercase mb-0">{% trans "Payments" %}</h2>
+    {% if can_record_payment and not obj.is_cancelled and obj.due_amount > 0 %}
+    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#payModal">
+      <i class="bi bi-cash-coin"></i> {% trans "Record Payment" %}</button>
+    {% endif %}
+  </div>
+  <div class="small mt-2">{% trans "Paid" %}: <strong>{{ obj.paid_amount }}</strong> ·
+    {% trans "Due" %}: <strong class="{% if obj.due_amount > 0 %}text-danger{% else %}text-success{% endif %}">{{ obj.due_amount }}</strong></div>
+  <hr class="mt-2">
+  <ul class="list-group list-group-flush">
+    {% for p in payments %}
+      <li class="list-group-item px-0 d-flex justify-content-between">
+        <span class="small">{% if use_bs %}{{ p.payment_date|npdate:False }}{% else %}{{ p.payment_date|date:'Y-m-d' }}{% endif %}
+          · {{ p.get_method_display }}</span>
+        <strong>{{ p.amount }}</strong></li>
+    {% empty %}
+      <li class="list-group-item px-0 text-muted small">{% trans "No payments recorded yet." %}</li>
+    {% endfor %}
+  </ul>
+</div>
+</div>{# /col-lg-4 #}
+</div>{# /row #}
+
+{% if can_record_payment and not obj.is_cancelled and obj.due_amount > 0 %}
+<div class="modal fade" id="payModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'purchases:purchase_payment' obj.pk %}" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-cash-coin me-1"></i> {% trans "Record Payment" %}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-light border py-2 small mb-3">
+          {% trans "Due on this purchase" %}: <strong>{{ obj.tenant.default_currency }} {{ obj.due_amount }}</strong>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">{% trans "Amount" %} <span class="text-danger">*</span></label>
+          <input type="number" name="amount" class="form-control" step="0.01" min="0.01"
+                 max="{{ obj.due_amount|stringformat:'s' }}" value="{{ obj.due_amount|stringformat:'s' }}" required>
+          <div class="form-text">{% trans "Cannot exceed the due amount." %}</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">{% trans "Date" %}</label>{{ record_payment_form.payment_date }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label">{% trans "Method" %}</label>{{ record_payment_form.method }}
+        </div>
+        <div class="mb-1">
+          <label class="form-label">{% trans "Notes" %}</label>{{ record_payment_form.notes }}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+        <button type="submit" class="btn btn-success"><i class="bi bi-check-lg"></i> {% trans "Record Payment" %}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

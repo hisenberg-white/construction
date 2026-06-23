@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load form_extras i18n %}
+{% block title %}{{ verbose_name }} — DepotLedger{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-xxl-9">
+
+    <nav class="mb-3 small">
+      <a href="{% url crud.list %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> {{ verbose_name_plural|default:verbose_name }}</a>
+    </nav>
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      <div class="card shadow-sm">
+        <div class="card-header bg-white py-3 d-flex align-items-center">
+          <span class="badge text-bg-primary rounded-circle p-2 me-2"><i class="bi bi-pencil-square"></i></span>
+          <div>
+            <h1 class="h5 mb-0 page-title">{% if object %}{% trans "Edit" %}{% else %}{% trans "New" %}{% endif %} {{ verbose_name }}</h1>
+            <div class="text-muted small">{% trans "Fields marked" %} <span class="text-danger">*</span> {% trans "are required." %}</div>
+          </div>
+        </div>
+
+        <div class="card-body">
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+          <div class="row g-3">
+            {% for field in form %}
+              {% if field|is_checkbox %}
+                <div class="col-12" id="dl-field-{{ field.name }}">
+                  <div class="form-check form-switch fs-5 mt-2">
+                    {{ field }}
+                    <label class="form-check-label fs-6 ms-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                  </div>
+                  {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                  {% if field.errors %}<div class="text-danger small">{{ field.errors|striptags }}</div>{% endif %}
+                </div>
+              {% else %}
+                <div class="{{ field|field_col }}" id="dl-field-{{ field.name }}">
+                  <label class="form-label" for="{{ field.id_for_label }}">
+                    {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
+                  </label>
+                  {{ field }}
+                  {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                  {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|striptags }}</div>{% endif %}
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="card-footer bg-white d-flex justify-content-end gap-2 py-3">
+          <a class="btn btn-outline-secondary" href="{% url crud.list %}">{% trans "Cancel" %}</a>
+          <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-lg"></i> {% trans "Save" %}</button>
+        </div>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}

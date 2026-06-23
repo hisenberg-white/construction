@@ -1,0 +1,294 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: ne\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "SaaS Owner"
+msgstr "SaaS स्वामी"
+
+msgid "Language"
+msgstr "भाषा"
+
+msgid "Logout"
+msgstr "लगआउट"
+
+msgid "Dashboard"
+msgstr "ड्यासबोर्ड"
+
+msgid "Masters"
+msgstr "मास्टर डेटा"
+
+msgid "Customers"
+msgstr "ग्राहकहरू"
+
+msgid "Suppliers"
+msgstr "आपूर्तिकर्ताहरू"
+
+msgid "Materials"
+msgstr "सामग्रीहरू"
+
+msgid "Services"
+msgstr "सेवाहरू"
+
+msgid "Vehicle Types"
+msgstr "सवारी प्रकार"
+
+msgid "Vehicles"
+msgstr "सवारी साधनहरू"
+
+msgid "Capacity Rules"
+msgstr "क्षमता नियमहरू"
+
+msgid "Operations"
+msgstr "सञ्चालन"
+
+msgid "Purchases"
+msgstr "खरिद"
+
+msgid "Trips / Splits"
+msgstr "ट्रिप / विभाजन"
+
+msgid "Sales Invoices"
+msgstr "बिक्री बिलहरू"
+
+msgid "Payments"
+msgstr "भुक्तानीहरू"
+
+msgid "Ledger"
+msgstr "खाता"
+
+msgid "Stock Ledger"
+msgstr "स्टक खाता"
+
+msgid "Expenses"
+msgstr "खर्चहरू"
+
+msgid "Expense Categories"
+msgstr "खर्च वर्गहरू"
+
+msgid "Employees"
+msgstr "कर्मचारीहरू"
+
+msgid "Work Logs"
+msgstr "कार्य अभिलेख"
+
+msgid "Administration"
+msgstr "प्रशासन"
+
+msgid "Depots"
+msgstr "डिपोहरू"
+
+msgid "Company Settings"
+msgstr "कम्पनी सेटिङ"
+
+msgid "Email Settings"
+msgstr "इमेल सेटिङ"
+
+msgid "Users & Roles"
+msgstr "प्रयोगकर्ता र भूमिका"
+
+msgid "Audit Log"
+msgstr "अडिट लग"
+
+msgid "Client Companies"
+msgstr "ग्राहक कम्पनीहरू"
+
+msgid "Plans"
+msgstr "योजनाहरू"
+
+msgid "Subscriptions"
+msgstr "सदस्यताहरू"
+
+msgid "Usage"
+msgstr "उपयोग"
+
+msgid "System"
+msgstr "प्रणाली"
+
+msgid "Django Admin"
+msgstr "Django एडमिन"
+
+msgid "Add"
+msgstr "थप्नुहोस्"
+
+msgid "Name"
+msgstr "नाम"
+
+msgid "Phone"
+msgstr "फोन"
+
+msgid "Cancel"
+msgstr "रद्द गर्नुहोस्"
+
+msgid "Save & select"
+msgstr "सुरक्षित गरी छान्नुहोस्"
+
+msgid "New"
+msgstr "नयाँ"
+
+msgid "Actions"
+msgstr "कार्यहरू"
+
+msgid "View"
+msgstr "हेर्नुहोस्"
+
+msgid "Edit"
+msgstr "सम्पादन"
+
+msgid "Delete"
+msgstr "मेटाउनुहोस्"
+
+msgid "No records yet."
+msgstr "अहिलेसम्म कुनै रेकर्ड छैन।"
+
+msgid "Previous"
+msgstr "अघिल्लो"
+
+msgid "Next"
+msgstr "अर्को"
+
+msgid "Page %(n)s of %(total)s"
+msgstr "पृष्ठ %(n)s / %(total)s"
+
+msgid "Fields marked"
+msgstr "चिन्ह लगाइएका फिल्ड"
+
+msgid "are required."
+msgstr "अनिवार्य छन्।"
+
+msgid "Save"
+msgstr "सुरक्षित गर्नुहोस्"
+
+msgid "Back"
+msgstr "पछाडि"
+
+msgid "Yes, delete"
+msgstr "हो, मेटाउनुहोस्"
+
+msgid "Reason"
+msgstr "कारण"
+
+msgid "Confirm cancellation"
+msgstr "रद्द पुष्टि गर्नुहोस्"
+
+msgid "Are you sure you want to permanently delete <strong>%(obj)s</strong>? This cannot be undone."
+msgstr "के तपाईं <strong>%(obj)s</strong> लाई स्थायी रूपमा मेटाउन निश्चित हुनुहुन्छ? यो उल्टाउन सकिँदैन।"
+
+msgid "Financial records are not deleted — cancelling <strong>%(obj)s</strong> voids it and keeps an audit trail."
+msgstr "वित्तीय रेकर्ड मेटिँदैन — <strong>%(obj)s</strong> रद्द गर्दा यो खारेज हुन्छ र अडिट ट्रेल राख्छ।"
+
+msgid "SaaS overview"
+msgstr "SaaS सिंहावलोकन"
+
+msgid "Use the sidebar to manage master data and record daily operations."
+msgstr "मास्टर डेटा व्यवस्थापन र दैनिक कारोबार अभिलेख गर्न साइडबार प्रयोग गर्नुहोस्।"
+
+msgid "Today's Sales"
+msgstr "आजको बिक्री"
+
+msgid "Today's Collection"
+msgstr "आजको संकलन"
+
+msgid "Credit Due"
+msgstr "बाँकी उधारो"
+
+msgid "Stock Value"
+msgstr "स्टक मूल्य"
+
+msgid "Net Profit (est.)"
+msgstr "खुद नाफा (अनुमानित)"
+
+msgid "Sign in"
+msgstr "साइन इन"
+
+msgid "Invalid username or password."
+msgstr "अमान्य प्रयोगकर्ता नाम वा पासवर्ड।"
+
+msgid "Username"
+msgstr "प्रयोगकर्ता नाम"
+
+msgid "Password"
+msgstr "पासवर्ड"
+
+msgid "No company linked"
+msgstr "कुनै कम्पनी जोडिएको छैन"
+
+msgid "No company linked to your account"
+msgstr "तपाईंको खातामा कुनै कम्पनी जोडिएको छैन"
+
+msgid "Your user is not yet assigned to a company. Please ask your administrator to create your profile, or sign in as a SaaS owner."
+msgstr "तपाईंको प्रयोगकर्ता अझै कुनै कम्पनीमा तोकिएको छैन। कृपया प्रशासकलाई तपाईंको प्रोफाइल बनाउन भन्नुहोस्, वा SaaS स्वामीको रूपमा साइन इन गर्नुहोस्।"
+
+msgid "Sign out"
+msgstr "साइन आउट"
+
+msgid "Share invoice:"
+msgstr "बिल साझा गर्नुहोस्:"
+
+msgid "Download PDF"
+msgstr "PDF डाउनलोड"
+
+msgid "Customer has no email"
+msgstr "ग्राहकको इमेल छैन"
+
+msgid "Email to customer"
+msgstr "ग्राहकलाई इमेल"
+
+msgid "Customer has no email on file."
+msgstr "ग्राहकको इमेल अभिलेखमा छैन।"
+
+msgid "Line Items"
+msgstr "लाइन वस्तुहरू"
+
+msgid "Item"
+msgstr "वस्तु"
+
+msgid "Vehicle"
+msgstr "सवारी"
+
+msgid "Qty"
+msgstr "परिमाण"
+
+msgid "Unit"
+msgstr "एकाइ"
+
+msgid "Rate"
+msgstr "दर"
+
+msgid "Amount"
+msgstr "रकम"
+
+msgid "No line items."
+msgstr "कुनै लाइन वस्तु छैन।"
+
+msgid "Delivery / Share Log"
+msgstr "डेलिभरी / साझा लग"
+
+msgid "Log delivery"
+msgstr "डेलिभरी लग गर्नुहोस्"
+
+msgid "Not shared yet."
+msgstr "अहिलेसम्म साझा गरिएको छैन।"
+
+msgid "Sale Invoice"
+msgstr "बिक्री बिल"
+
+msgid "Material"
+msgstr "सामग्री"
+
+msgid "Service"
+msgstr "सेवा"
+
+msgid "Vehicle Type"
+msgstr "सवारी प्रकार"
+
+msgid "Description"
+msgstr "विवरण"
+
+msgid "Remove"
+msgstr "हटाउनुहोस्"
+
+msgid "Save Invoice"
+msgstr "बिल सुरक्षित गर्नुहोस्"

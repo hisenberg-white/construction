@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Dashboard" %} — DepotLedger SaaS{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="h3 page-title mb-1">{% trans "Dashboard" %}</h1>
+    <p class="text-muted mb-0">{% if current_tenant %}{{ current_tenant }}{% else %}{% trans "SaaS overview" %}{% endif %}</p>
+  </div>
+</div>
+
+{% if no_company %}
+<div class="alert alert-info d-flex align-items-center">
+  <i class="bi bi-building me-2 fs-5"></i>
+  <div>{% trans "Pick a company from the selector in the top bar to view its dashboard and enter data." %}</div>
+</div>
+{% elif is_staff_role %}
+<div class="row g-3">
+  {% for card in staff_counts %}
+  <div class="col-sm-4"><div class="card shadow-sm stat-card h-100"><div class="card-body d-flex align-items-center">
+    <div class="stat-icon text-bg-{{ card.color }} me-3"><i class="bi {{ card.icon }}"></i></div>
+    <div><div class="text-muted small text-uppercase">{{ card.label }}</div><div class="h4 mb-0 fw-bold">{{ card.value }}</div></div>
+  </div></div></div>
+  {% endfor %}
+</div>
+{% else %}
+
+<div class="row g-3">
+  {% for card in cards %}
+  <div class="col-6 col-xl-3">
+    <div class="card stat-card shadow-sm h-100">
+      <div class="card-body d-flex align-items-center">
+        <div class="stat-icon text-bg-{{ card.color }} me-3"><i class="bi {{ card.icon }}"></i></div>
+        <div>
+          <div class="text-muted small text-uppercase" style="letter-spacing:.04em">{{ card.label }}</div>
+          <div class="h5 mb-0 fw-bold">{{ currency }} {{ card.value|floatformat:2 }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-3 mt-0">
+  {% for card in cards2 %}
+  <div class="col-6 col-xl-3">
+    <div class="card stat-card shadow-sm h-100">
+      <div class="card-body d-flex align-items-center">
+        <div class="stat-icon text-bg-{{ card.color }} me-3"><i class="bi {{ card.icon }}"></i></div>
+        <div>
+          <div class="text-muted small text-uppercase" style="letter-spacing:.04em">{{ card.label }}</div>
+          <div class="h5 mb-0 fw-bold">{{ currency }} {{ card.value|floatformat:2 }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-3 mt-0">
+  <div class="col-lg-8">
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-white fw-semibold">{% trans "Sales & Profit — last 30 days" %}</div>
+      <div class="card-body"><canvas id="chartSalesProfit" height="110"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-white fw-semibold">{% trans "Expenses by category (this month)" %}</div>
+      <div class="card-body">
+        {% if has_expense_breakdown %}<canvas id="chartExpenses" height="220"></canvas>
+        {% else %}<p class="text-muted mb-0">{% trans "No expenses this month." %}</p>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if not no_company and not is_staff_role %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const labels = {{ chart_labels|safe }};
+  const sales = {{ chart_sales|safe }};
+  const profit = {{ chart_profit|safe }};
+  const sp = document.getElementById('chartSalesProfit');
+  if (sp && window.Chart) {
+    new Chart(sp, {
+      type: 'line',
+      data: { labels: labels, datasets: [
+        { label: 'Sales', data: sales, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.12)', fill: true, tension: .3 },
+        { label: 'Profit', data: profit, borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,.10)', fill: true, tension: .3 },
+      ]},
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'top' } },
+        scales: { y: { beginAtZero: true } } }
+    });
+  }
+  {% if has_expense_breakdown %}
+  const ex = document.getElementById('chartExpenses');
+  if (ex && window.Chart) {
+    new Chart(ex, {
+      type: 'doughnut',
+      data: { labels: {{ chart_exp_labels|safe }},
+        datasets: [{ data: {{ chart_exp_data|safe }},
+          backgroundColor: ['#2563eb','#16a34a','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#64748b'] }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+    });
+  }
+  {% endif %}
+})();
+</script>
+{% endif %}
+{% endblock %}

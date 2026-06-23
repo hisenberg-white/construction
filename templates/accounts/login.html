@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Sign in" %} — DepotLedger SaaS{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5 col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h4 mb-3 text-center">DepotLedger SaaS</h1>
+        {% if form.errors %}
+          <div class="alert alert-danger">{% trans "Invalid username or password." %}</div>
+        {% endif %}
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label" for="id_username">{% trans "Username" %}</label>
+            <input class="form-control" type="text" name="username" id="id_username" autofocus required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="id_password">{% trans "Password" %}</label>
+            <input class="form-control" type="password" name="password" id="id_password" required>
+          </div>
+          <button class="btn btn-primary w-100" type="submit">{% trans "Sign in" %}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

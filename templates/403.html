@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}Access denied — DepotLedger{% endblock %}
+{% block content %}
+<div class="text-center py-5">
+  <h1 class="display-5 text-danger">403</h1>
+  <p class="lead">{{ exception|default:"You do not have permission to access this page." }}</p>
+  <a class="btn btn-primary" href="{% url 'reports:dashboard' %}">Back to dashboard</a>
+</div>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load i18n form_extras %}
+{% block title %}{% trans "Stock Ledger" %} — DepotLedger{% endblock %}
+{% block content %}
+
+<form method="get" class="card shadow-sm mb-3 dl-no-print" style="max-width:960px;margin:0 auto;">
+  <div class="card-body row g-2 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label">{% trans "Depot" %}</label>
+      <select name="depot" class="form-select">
+        <option value="">{% trans "All depots" %}</option>
+        {% for d in depots %}<option value="{{ d.pk }}"{% if depot_id == d.pk|stringformat:'s' %} selected{% endif %}>{{ d.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">{% trans "Material" %}</label>
+      <select name="material" class="form-select">
+        <option value="">{% trans "All materials" %}</option>
+        {% for m in materials %}<option value="{{ m.pk }}"{% if material_id == m.pk|stringformat:'s' %} selected{% endif %}>{{ m.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">{% trans "From" %}</label>
+      <input type="date" name="from" value="{{ date_from|date:'Y-m-d' }}" class="form-control">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">{% trans "To" %}</label>
+      <input type="date" name="to" value="{{ date_to|date:'Y-m-d' }}" class="form-control">
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-primary w-100"><i class="bi bi-funnel"></i> {% trans "Filter" %}</button>
+    </div>
+  </div>
+</form>
+
+{% if can_adjust %}
+<div class="dl-no-print mb-2" style="max-width:960px;margin:0 auto;">
+  <a class="btn btn-sm btn-outline-primary" href="{% url 'inventory:stock_create' %}"><i class="bi bi-plus-lg"></i> {% trans "New Stock Adjustment" %}</a>
+</div>
+{% endif %}
+
+<div class="dl-document">
+  {% include 'core/_doc_header.html' with company=company doc_title="Stock Ledger" %}
+  <div class="text-muted small mb-2">
+    {% if use_bs %}{{ date_from|npdate:False }} → {{ date_to|npdate:False }} (BS){% else %}{{ date_from }} → {{ date_to }}{% endif %}
+  </div>
+  <div class="table-responsive">
+    <table class="table table-bordered mb-0 align-middle" style="font-variant-numeric:tabular-nums;">
+      <thead class="table-light">
+        <tr>
+          <th style="width:120px">{% trans "Date" %}</th>
+          <th>{% trans "Depot" %}</th>
+          <th>{% trans "Material" %}</th>
+          <th>{% trans "Type" %}</th>
+          <th>{% trans "Reference" %}</th>
+          <th class="text-end">{% trans "In" %}</th>
+          <th class="text-end">{% trans "Out" %}</th>
+          <th class="text-end">{% trans "Balance" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if single_account %}
+        <tr class="table-light fst-italic">
+          <td>—</td><td></td><td></td><td>{% trans "Opening Balance" %}</td><td></td>
+          <td class="text-end"></td><td class="text-end"></td>
+          <td class="text-end">{{ opening_balance }}</td>
+        </tr>
+        {% endif %}
+        {% for e in entries %}
+        <tr>
+          <td>{% if use_bs %}{{ e.created_at|npdate:False }}{% else %}{{ e.created_at|date:'Y-m-d' }}{% endif %}</td>
+          <td>{{ e.depot }}</td>
+          <td>{{ e.material }}</td>
+          <td>{{ e.get_transaction_type_display }}</td>
+          <td class="text-muted small">{{ e.reference_type|default:'' }}{% if e.reference_id %} #{{ e.reference_id }}{% endif %}</td>
+          <td class="text-end">{% if e.qty_in %}{{ e.qty_in }}{% endif %}</td>
+          <td class="text-end">{% if e.qty_out %}{{ e.qty_out }}{% endif %}</td>
+          <td class="text-end">{{ e.balance_after }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-4">{% trans "No stock movements in this period." %}</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="table-light fw-bold">
+        <tr>
+          <td colspan="5" class="text-end">{% trans "Totals" %}</td>
+          <td class="text-end">{{ total_in }}</td>
+          <td class="text-end">{{ total_out }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load i18n form_extras %}
+{% block title %}{% trans "Purchase" %} — DepotLedger{% endblock %}
+{% block extra_head %}{{ block.super }}
+<script>window.DL_VEHICLE_CAPACITY = {{ vehicle_capacity_json|safe }};</script>
+{% endblock %}
+{% block content %}
+<h1 class="h3 page-title mb-3">{% if object %}{% trans "Edit" %}{% else %}{% trans "New" %}{% endif %} {% trans "Purchase" %}</h1>
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="row g-3">
+        {% for field in form %}
+          <div class="{% if field|widget_type == 'Textarea' %}col-12{% else %}col-md-4{% endif %}">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+            {% if field.errors %}<div class="text-danger small">{{ field.errors|striptags }}</div>{% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-3">
+    <div class="card-header d-flex align-items-center">
+      <i class="bi bi-wallet2 me-2"></i> {% trans "Other Expenses" %}
+      <span class="text-muted small ms-2">({% trans "petrol, transport, unloading, labour…" %})</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table mb-0 align-middle">
+        <thead class="table-light">
+          <tr><th style="width:45%">{% trans "Expense type" %}</th><th>{% trans "Amount" %}</th><th>{% trans "Note" %}</th><th>{% trans "Remove" %}</th></tr>
+        </thead>
+        <tbody>
+          {{ expense_formset.management_form }}
+          {% for ef in expense_formset %}
+            {{ ef.id }}
+            <tr>
+              <td>{{ ef.category }}</td>
+              <td>{{ ef.amount }}</td>
+              <td>{{ ef.note }}</td>
+              <td>{% if ef.instance.pk %}{{ ef.DELETE }}{% endif %}</td>
+            </tr>
+            {% if ef.errors %}<tr><td colspan="4" class="text-danger small">{{ ef.errors }}</td></tr>{% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer text-muted small">{% trans "Material cost (qty × rate) plus these expenses make the total purchase cost." %}</div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> {% trans "Save Purchase" %}</button>
+    <a class="btn btn-outline-secondary" href="{% url 'purchases:purchase_list' %}">{% trans "Cancel" %}</a>
+  </div>
+</form>
+{% endblock %}

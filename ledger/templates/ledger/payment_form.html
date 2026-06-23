@@ -1,0 +1,31 @@
+{% extends 'core/object_form.html' %}
+{% block extra_js %}
+<script>
+(function () {
+  const partyType = document.getElementById('id_party_type');
+  if (!partyType) return;
+  // party value -> the field wrapper to show
+  const map = {
+    customer: 'dl-field-customer',
+    supplier: 'dl-field-supplier',
+    employee: 'dl-field-employee',
+  };
+  const wrappers = {
+    customer: document.getElementById('dl-field-customer'),
+    supplier: document.getElementById('dl-field-supplier'),
+    employee: document.getElementById('dl-field-employee'),
+  };
+
+  function apply() {
+    const val = partyType.value;
+    Object.keys(wrappers).forEach(function (key) {
+      const el = wrappers[key];
+      if (!el) return;
+      el.style.display = (key === val) ? '' : 'none';
+    });
+  }
+  partyType.addEventListener('change', apply);
+  apply();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,22 @@
+<div class="d-flex justify-content-between align-items-start">
+  <div class="d-flex align-items-center gap-3">
+    {% if company.logo %}<img src="{{ company.logo.url }}" alt="logo" class="dl-doc-logo">{% endif %}
+    <div>
+      <div class="dl-doc-company">{{ company.name|default:"DepotLedger" }}</div>
+      <div class="text-muted small">
+        {% if company.address %}{{ company.address }}<br>{% endif %}
+        {% if company.phone %}{{ company.phone }}{% endif %}{% if company.email %} · {{ company.email }}{% endif %}
+        {% if company.registration_no %}<br>Reg: {{ company.registration_no }}{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="text-end">
+    {% if doc_title %}<div class="dl-doc-title">{{ doc_title }}</div>{% endif %}
+    {% if doc_subtitle %}<div class="text-muted">{{ doc_subtitle }}</div>{% endif %}
+    {% if qr %}
+      <img src="{{ qr }}" alt="QR" style="width:92px;height:92px" class="mt-2">
+      <div class="text-muted" style="font-size:.68rem">Scan to view bill</div>
+    {% endif %}
+  </div>
+</div>
+<hr class="dl-doc-rule">

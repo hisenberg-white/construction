@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Vehicle Analytics" %} — DepotLedger{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="h3 page-title mb-1">{% trans "Vehicle Analytics" %}</h1>
+    <p class="text-muted mb-0">{% trans "Revenue, cost and profit per vehicle" %}</p>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-white fw-semibold">{% trans "Vehicle Summary" %}</div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th>{% trans "Vehicle" %}</th>
+          <th class="text-end">{% trans "Revenue" %}</th>
+          <th class="text-end">{% trans "Purchase Cost" %}</th>
+          <th class="text-end">{% trans "Expenses" %}</th>
+          <th class="text-end">{% trans "Net Profit" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.vehicle.name }}</td>
+          <td class="text-end">{{ currency }} {{ row.revenue|floatformat:2 }}</td>
+          <td class="text-end">{{ currency }} {{ row.purchase_cost|floatformat:2 }}</td>
+          <td class="text-end">{{ currency }} {{ row.expense_cost|floatformat:2 }}</td>
+          <td class="text-end fw-bold {% if row.profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+            {{ currency }} {{ row.profit|floatformat:2 }}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-4">{% trans "No vehicles found." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-white fw-semibold">{% trans "Net Profit per Vehicle" %}</div>
+      <div class="card-body"><canvas id="chartVehProfit" height="120"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-white fw-semibold">{% trans "Vehicle Expenses by Category" %}</div>
+      <div class="card-body">
+        {% if has_ebc %}
+        <canvas id="chartEbc" height="220"></canvas>
+        {% else %}
+        <p class="text-muted mb-0">{% trans "No vehicle expenses recorded." %}</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  var vehLabels = {{ chart_veh_labels|safe }};
+  var vehProfit = {{ chart_veh_profit|safe }};
+
+  var barColors = vehProfit.map(function(v) { return v >= 0 ? 'rgba(22,163,74,.75)' : 'rgba(220,38,38,.75)'; });
+  var barBorders = vehProfit.map(function(v) { return v >= 0 ? '#16a34a' : '#dc2626'; });
+
+  var vp = document.getElementById('chartVehProfit');
+  if (vp && window.Chart && vehLabels.length) {
+    new Chart(vp, {
+      type: 'bar',
+      data: {
+        labels: vehLabels,
+        datasets: [{
+          label: 'Net Profit',
+          data: vehProfit,
+          backgroundColor: barColors,
+          borderColor: barBorders,
+          borderWidth: 1,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  }
+
+  {% if has_ebc %}
+  var eb = document.getElementById('chartEbc');
+  if (eb && window.Chart) {
+    new Chart(eb, {
+      type: 'doughnut',
+      data: {
+        labels: {{ chart_ebc_labels|safe }},
+        datasets: [{
+          data: {{ chart_ebc_data|safe }},
+          backgroundColor: ['#2563eb','#16a34a','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#64748b','#0ea5e9','#84cc16']
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+  }
+  {% endif %}
+})();
+</script>
+{% endblock %}

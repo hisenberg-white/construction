@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% load i18n form_extras %}
+{% block title %}{{ obj.invoice_no }} — DepotLedger{% endblock %}
+{% block content %}
+
+{# --- Action bar (not printed) --- #}
+<div class="d-flex flex-wrap justify-content-end gap-2 mb-3 dl-no-print">
+  <a class="btn btn-outline-secondary" href="{% url 'sales:invoice_list' %}"><i class="bi bi-arrow-left"></i> {% trans "Back" %}</a>
+  <a class="btn btn-outline-dark" href="{% url 'sales:invoice_pdf' obj.pk %}" target="_blank"><i class="bi bi-file-earmark-pdf"></i> {% trans "Download PDF" %}</a>
+  {% if can_update and available.update %}<a class="btn btn-outline-primary" href="{% url crud.update obj.pk %}"><i class="bi bi-pencil"></i> {% trans "Edit" %}</a>{% endif %}
+  {% if can_update %}
+  <form method="post" action="{% url 'sales:invoice_email' obj.pk %}" class="d-inline">
+    {% csrf_token %}
+    <button class="btn btn-outline-primary" type="submit" {% if not obj.customer.email %}disabled title="{% trans 'Customer has no email' %}"{% endif %}>
+      <i class="bi bi-envelope"></i> {% trans "Email to customer" %}</button>
+  </form>
+  {% endif %}
+  {% if can_cancel and available.cancel and not obj.is_cancelled %}
+    <a class="btn btn-outline-warning" href="{% url crud.cancel obj.pk %}"><i class="bi bi-x-circle"></i> {% trans "Cancel" %}</a>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+{# === Left column: invoice details === #}
+<div class="col-lg-8">
+<div class="dl-document">
+  <div class="d-flex justify-content-end mb-1">
+    <span class="badge fs-6 text-bg-{% if obj.payment_status == 'paid' %}success{% elif obj.payment_status == 'partial' %}warning{% else %}danger{% endif %}">
+      <i class="bi bi-cash-coin me-1"></i>{{ obj.get_payment_status_display }}</span>
+  </div>
+  {% include 'core/_doc_header.html' with company=obj.tenant doc_title="Invoice" doc_subtitle=obj.invoice_no qr=qr %}
+
+  {% if obj.is_cancelled %}<div class="alert alert-danger py-2"><strong>{% trans "CANCELLED" %}</strong>{% if obj.cancel_reason %} — {{ obj.cancel_reason }}{% endif %}</div>{% endif %}
+
+  <div class="row mb-3">
+    <div class="col-sm-6">
+      <div class="text-muted small text-uppercase">{% trans "Bill To" %}</div>
+      <div class="fw-bold">{{ obj.customer.name }}</div>
+      <div class="text-muted small">
+        {% if obj.customer.phone %}{{ obj.customer.phone }}<br>{% endif %}
+        {{ obj.customer.address }}
+      </div>
+    </div>
+    <div class="col-sm-6 text-sm-end">
+      <div><span class="text-muted">{% trans "Date" %}:</span>
+        {% if use_bs %}{{ obj.invoice_date|npdate:False }} (BS){% else %}{{ obj.invoice_date|date:'Y-m-d' }}{% endif %}</div>
+      <div><span class="text-muted">{% trans "Depot" %}:</span> {{ obj.depot }}</div>
+    </div>
+  </div>
+
+  <table class="table table-bordered align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>#</th><th>{% trans "Item" %}</th><th>{% trans "Vehicle" %}</th>
+        <th class="text-end">{% trans "Qty" %}</th><th>{% trans "Unit" %}</th>
+        <th class="text-end">{% trans "Rate" %}</th><th class="text-end">{% trans "Amount" %}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for line in lines %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>{{ line.material|default:line.service|default:line.description }}</td>
+        <td>{{ line.vehicle|default:'—' }}</td>
+        <td class="text-end">{{ line.qty }}</td>
+        <td>{{ line.unit|default:'—' }}</td>
+        <td class="text-end">{{ line.rate }}</td>
+        <td class="text-end">{{ line.amount }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="text-center text-muted py-3">{% trans "No line items." %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <table class="dl-doc-totals">
+    <tr><td class="text-muted">{% trans "Subtotal" %}</td><td class="text-end">{{ obj.subtotal }}</td></tr>
+    <tr><td class="text-muted">{% trans "Additional charges" %}</td><td class="text-end">{{ obj.additional_charges }}</td></tr>
+    <tr><td class="text-muted">{% trans "Discount" %}</td><td class="text-end">− {{ obj.discount }}</td></tr>
+    <tr><td class="text-muted">{% trans "Tax" %}</td><td class="text-end">{{ obj.tax }}</td></tr>
+    <tr class="fw-bold border-top"><td>{% trans "Total" %}</td><td class="text-end">{{ obj.tenant.default_currency }} {{ obj.total }}</td></tr>
+    <tr><td class="text-muted">{% trans "Paid" %}</td><td class="text-end">{{ obj.paid }}</td></tr>
+    <tr class="fw-bold"><td>{% trans "Due" %}</td><td class="text-end">{{ obj.due }}</td></tr>
+  </table>
+
+  {% if obj.notes %}<p class="text-muted mt-3"><strong>{% trans "Notes" %}:</strong> {{ obj.notes }}</p>{% endif %}
+  {% if obj.reference_image %}
+  <div class="mt-3">
+    <div class="text-muted small text-uppercase">{% trans "Reference" %}</div>
+    <a href="{{ obj.reference_image.url }}" target="_blank">
+      <img src="{{ obj.reference_image.url }}" alt="reference" class="img-thumbnail" style="max-height:160px">
+    </a>
+  </div>
+  {% endif %}
+</div>
+</div>{# /col-lg-8 #}
+
+{# === Right column: payment log === #}
+<div class="col-lg-4">
+<div class="dl-document dl-no-print h-100">
+  <div class="d-flex justify-content-between align-items-center">
+    <h2 class="h6 text-muted text-uppercase mb-0">{% trans "Payments" %}</h2>
+    {% if can_record_payment and not obj.is_cancelled and obj.due > 0 %}
+    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#payModal">
+      <i class="bi bi-cash-coin"></i> {% trans "Record Payment" %}</button>
+    {% endif %}
+  </div>
+  <div class="small mt-2">{% trans "Paid" %}: <strong>{{ obj.paid }}</strong> ·
+    {% trans "Due" %}: <strong class="{% if obj.due > 0 %}text-danger{% else %}text-success{% endif %}">{{ obj.due }}</strong></div>
+  <hr class="mt-2">
+  <ul class="list-group list-group-flush">
+    {% for p in payments %}
+      <li class="list-group-item px-0 d-flex justify-content-between">
+        <span class="small">{% if use_bs %}{{ p.payment_date|npdate:False }}{% else %}{{ p.payment_date|date:'Y-m-d' }}{% endif %}
+          · {{ p.get_method_display }}</span>
+        <strong>{{ p.amount }}</strong></li>
+    {% empty %}
+      <li class="list-group-item px-0 text-muted small">{% trans "No payments recorded yet." %}</li>
+    {% endfor %}
+  </ul>
+</div>
+</div>{# /col-lg-4 #}
+</div>{# /row #}
+
+{% if can_record_payment and not obj.is_cancelled and obj.due > 0 %}
+<div class="modal fade" id="payModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'sales:invoice_payment' obj.pk %}" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-cash-coin me-1"></i> {% trans "Record Payment" %}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-light border py-2 small mb-3">
+          {% trans "Due on this invoice" %}: <strong>{{ obj.tenant.default_currency }} {{ obj.due }}</strong>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">{% trans "Amount" %} <span class="text-danger">*</span></label>
+          <input type="number" name="amount" class="form-control" step="0.01" min="0.01"
+                 max="{{ obj.due|stringformat:'s' }}" value="{{ obj.due|stringformat:'s' }}" required>
+          <div class="form-text">{% trans "Cannot exceed the due amount." %}</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">{% trans "Date" %}</label>{{ record_payment_form.payment_date }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label">{% trans "Method" %}</label>{{ record_payment_form.method }}
+        </div>
+        <div class="mb-1">
+          <label class="form-label">{% trans "Notes" %}</label>{{ record_payment_form.notes }}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+        <button type="submit" class="btn btn-success"><i class="bi bi-check-lg"></i> {% trans "Record Payment" %}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

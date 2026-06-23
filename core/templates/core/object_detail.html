@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{{ verbose_name }} — DepotLedger{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">{{ verbose_name }}: {{ obj }}</h1>
+  <div class="text-nowrap">
+    {% if can_update and available.update %}<a class="btn btn-outline-primary" href="{% url crud.update obj.pk %}">{% trans "Edit" %}</a>{% endif %}
+    {% if delete_action == 'delete' and can_delete and available.delete %}
+      <a class="btn btn-outline-danger" href="{% url crud.delete obj.pk %}">{% trans "Delete" %}</a>
+    {% elif delete_action == 'cancel' and can_cancel and available.cancel %}
+      <a class="btn btn-outline-warning" href="{% url crud.cancel obj.pk %}">{% trans "Cancel" %}</a>
+    {% endif %}
+    <a class="btn btn-outline-secondary" href="{% url crud.list %}">{% trans "Back" %}</a>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <table class="table mb-0">
+    <tbody>
+      {% for label, value in detail_rows %}
+      <tr><th class="w-25 text-muted">{{ label }}</th><td>{{ value }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% block detail_extra %}{% endblock %}
+{% endblock %}

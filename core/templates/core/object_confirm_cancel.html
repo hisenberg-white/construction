@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Cancel" %} {{ verbose_name }} — DepotLedger{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card border-warning shadow-sm">
+      <div class="card-body">
+        <h1 class="h4 text-warning-emphasis">{% trans "Cancel" %} {{ verbose_name }}</h1>
+        <p>{% blocktrans %}Financial records are not deleted — cancelling <strong>{{ obj }}</strong> voids it and keeps an audit trail.{% endblocktrans %}</p>
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label" for="cancel_reason">{% trans "Reason" %}</label>
+            <textarea class="form-control" id="cancel_reason" name="cancel_reason" rows="3" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-warning">{% trans "Confirm cancellation" %}</button>
+          <a class="btn btn-outline-secondary" href="{% url crud.list %}">{% trans "Back" %}</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

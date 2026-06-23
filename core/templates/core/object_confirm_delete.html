@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Delete" %} {{ verbose_name }} — DepotLedger{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card border-danger shadow-sm">
+      <div class="card-body">
+        <h1 class="h4 text-danger">{% trans "Delete" %} {{ verbose_name }}</h1>
+        <p>{% blocktrans %}Are you sure you want to permanently delete <strong>{{ obj }}</strong>? This cannot be undone.{% endblocktrans %}</p>
+        <form method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">{% trans "Yes, delete" %}</button>
+          <a class="btn btn-outline-secondary" href="{% url crud.list %}">{% trans "Cancel" %}</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
