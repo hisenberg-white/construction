@@ -1,5 +1,7 @@
 """SaaS plans, subscriptions and usage/entry billing (SRS section 8, FR-18)."""
+from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 from core.models import TimeStampedModel
 
@@ -90,3 +92,37 @@ class SubscriptionUsage(TimeStampedModel):
 
     def __str__(self):
         return f'{self.tenant} usage {self.period_start}–{self.period_end}'
+
+
+class UsageEntry(models.Model):
+    """One billable event behind a :class:`SubscriptionUsage` period — which
+    invoice / purchase / SMS it was and what it was charged (SRS FR-18)."""
+
+    class Kind(models.TextChoices):
+        INVOICE = 'invoice', 'Sales Invoice'
+        PURCHASE = 'purchase', 'Purchase'
+        SMS = 'sms', 'SMS'
+        ENTRY = 'entry', 'Other entry'
+
+    usage = models.ForeignKey(SubscriptionUsage, on_delete=models.CASCADE, related_name='entries')
+    tenant = models.ForeignKey('tenants.TenantCompany', on_delete=models.CASCADE,
+                               related_name='usage_entries')
+    kind = models.CharField(max_length=10, choices=Kind.choices)
+    # The document that caused the charge (sale_invoice / purchase + its pk).
+    reference_type = models.CharField(max_length=40, blank=True)
+    reference_id = models.PositiveBigIntegerField(null=True, blank=True)
+    description = models.CharField(max_length=255, blank=True)
+    price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                   null=True, blank=True, related_name='+')
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    # True for rows rebuilt from documents for periods recorded before
+    # per-entry tracking existed (price is the period average).
+    reconstructed = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        indexes = [models.Index(fields=['usage', 'kind'])]
+
+    def __str__(self):
+        return f'{self.get_kind_display()} {self.description} ({self.price})'

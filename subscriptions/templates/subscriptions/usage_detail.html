@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load i18n pagination %}
+{% block title %}{% trans "Usage" %} {{ usage.tenant }} — DepotLedger{% endblock %}
+{% block content %}
+
+<nav class="mb-3 small dl-no-print">
+  <a href="{% url 'subscriptions:usage_list' %}" class="text-decoration-none text-muted">
+    <i class="bi bi-arrow-left"></i> {% trans "Subscription Usage" %}</a>
+</nav>
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+  <div>
+    <h1 class="h3 page-title mb-1">{{ usage.tenant }}</h1>
+    <div class="text-muted">{% trans "Usage period" %}: {{ usage.period_start }} → {{ usage.period_end }}</div>
+  </div>
+  <button type="button" class="btn btn-outline-secondary dl-no-print" onclick="window.print()"><i class="bi bi-printer"></i> {% trans "Print" %}</button>
+</div>
+
+{# ---- Totals for the period ---- #}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="card shadow-sm h-100"><div class="card-body">
+    <div class="text-muted small text-uppercase">{% trans "Amount due" %}</div>
+    <div class="h4 fw-bold mb-0 text-primary">{{ currency }} {{ usage.amount_due|floatformat:2 }}</div>
+  </div></div></div>
+  <div class="col-6 col-lg-3"><div class="card shadow-sm h-100"><div class="card-body">
+    <div class="text-muted small text-uppercase">{% trans "Billable entries" %}</div>
+    <div class="h4 fw-bold mb-0">{{ usage.entry_count }}</div>
+    <div class="small text-muted">{% blocktrans with n=usage.invoice_count %}{{ n }} invoices{% endblocktrans %}</div>
+  </div></div></div>
+  <div class="col-6 col-lg-3"><div class="card shadow-sm h-100"><div class="card-body">
+    <div class="text-muted small text-uppercase">{% trans "SMS sent" %}</div>
+    <div class="h4 fw-bold mb-0">{{ usage.sms_count }}</div>
+    <div class="small text-muted">{% trans "Not charged per entry" %}</div>
+  </div></div></div>
+  <div class="col-6 col-lg-3"><div class="card shadow-sm h-100"><div class="card-body">
+    <div class="text-muted small text-uppercase">{% trans "Storage used" %}</div>
+    <div class="h4 fw-bold mb-0">{{ usage.storage_used_mb|floatformat:"-2" }} <span class="fs-6 fw-normal">MB</span></div>
+  </div></div></div>
+</div>
+
+{# ---- Breakdown by type (also the filter) ---- #}
+{% if kinds %}
+<div class="d-flex flex-wrap gap-2 mb-3 dl-no-print">
+  <a class="btn btn-sm {% if not kind %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="?">
+    {% trans "All" %} <span class="badge text-bg-light ms-1">{{ usage.entries.count }}</span></a>
+  {% for value, label, n, amount in kinds %}
+  <a class="btn btn-sm {% if kind == value %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="?kind={{ value }}">
+    {{ label }} <span class="badge text-bg-light ms-1">{{ n }}</span>
+    {% if amount %}<span class="ms-1 small">· {{ currency }} {{ amount|floatformat:2 }}</span>{% endif %}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if has_reconstructed %}
+<div class="alert alert-info py-2 small dl-no-print">
+  <i class="bi bi-info-circle me-1"></i>
+  {% trans "Some entries were rebuilt from documents created in this period (marked “rebuilt”), because this period was recorded before per-entry tracking. Their price is the period average, so they still add up to the amount due." %}
+</div>
+{% endif %}
+
+{# ---- Every entry ---- #}
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0" style="font-variant-numeric:tabular-nums;">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>{% trans "Date & time" %}</th>
+          <th>{% trans "Type" %}</th>
+          <th>{% trans "Entry" %}</th>
+          <th>{% trans "By" %}</th>
+          <th class="text-end">{% trans "Charge" %} ({{ currency }})</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+        <tr>
+          <td class="text-muted">{{ page_obj.start_index|add:forloop.counter0 }}</td>
+          <td class="text-nowrap">{{ e.created_at|date:"Y-m-d H:i" }}</td>
+          <td>
+            {% if e.kind == 'invoice' %}<span class="badge text-bg-primary">{{ e.get_kind_display }}</span>
+            {% elif e.kind == 'purchase' %}<span class="badge text-bg-success">{{ e.get_kind_display }}</span>
+            {% elif e.kind == 'sms' %}<span class="badge text-bg-info">{{ e.get_kind_display }}</span>
+            {% else %}<span class="badge text-bg-secondary">{{ e.get_kind_display }}</span>{% endif %}
+          </td>
+          <td>
+            {{ e.description|default:"—" }}
+            {% if e.doc_cancelled %}<span class="badge text-bg-warning ms-1" title="{% trans 'Cancelled after it was billed' %}">{% trans "cancelled later" %}</span>{% endif %}
+            {% if e.reconstructed %}<span class="badge text-bg-light border text-muted ms-1">{% trans "rebuilt" %}</span>{% endif %}
+          </td>
+          <td>{{ e.created_by|default:"—" }}</td>
+          <td class="text-end fw-semibold">{% if e.price %}{{ e.price|floatformat:2 }}{% else %}<span class="text-muted">0.00</span>{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">{% trans "No entries recorded for this period." %}</td></tr>
+        {% endfor %}
+      </tbody>
+      {% if entries %}
+      <tfoot class="table-light fw-bold">
+        <tr>
+          <td colspan="5" class="text-end">{% if kind %}{% trans "Total for this type" %}{% else %}{% trans "Total" %}{% endif %}{% if is_paginated %} ({% trans "all pages" %}){% endif %}</td>
+          <td class="text-end">{% if kind %}{% for value, label, n, amount in kinds %}{% if value == kind %}{{ amount|floatformat:2 }}{% endif %}{% endfor %}{% else %}{{ entries_total|floatformat:2 }}{% endif %}</td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+{% pagination page_obj %}
+{% endblock %}

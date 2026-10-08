@@ -176,7 +176,9 @@ class _InvoiceFormMixin(TenantRequiredMixin, PermissionRequiredMixin, CrudContex
         if self.posts_effects:
             _post_invoice_effects(invoice, self.request.user)
             # SaaS per-entry billing: each invoice is one billable entry (SRS FR-18).
-            SubscriptionService.record_entry_usage(tenant=invoice.tenant, kind='invoice')
+            SubscriptionService.record_entry_usage(
+                tenant=invoice.tenant, kind='invoice', obj=invoice, actor=self.request.user,
+                description=f'Invoice {invoice.invoice_no} — {invoice.customer}')
         else:
             # Edited: post corrections so ledger + stock match the new amounts.
             sync_invoice(invoice, self.request.user)
@@ -394,7 +396,9 @@ class InvoiceSMSView(_InvoiceMessageView):
         send_sms(config, phone, text)
 
     def after_sent(self, invoice):
-        SubscriptionService.record_sms_usage(tenant=invoice.tenant)
+        SubscriptionService.record_sms_usage(
+            tenant=invoice.tenant, obj=invoice, actor=self.request.user,
+            description=f'SMS for invoice {invoice.invoice_no} to {invoice.customer.phone}')
 
 
 class InvoiceWhatsAppView(_InvoiceMessageView):

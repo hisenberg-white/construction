@@ -273,7 +273,9 @@ class _PurchaseFormMixin(TenantRequiredMixin, PermissionRequiredMixin, CrudConte
         if self.posts_effects:
             _post_purchase_effects(purchase, self.request.user)
             # SaaS per-entry billing — purchases are billable entries too (FR-18).
-            SubscriptionService.record_entry_usage(tenant=purchase.tenant, kind='purchase')
+            SubscriptionService.record_entry_usage(
+                tenant=purchase.tenant, kind='purchase', obj=purchase, actor=self.request.user,
+                description=f'Purchase #{purchase.pk} — {purchase.supplier or ""} {purchase.material or ""}'.strip())
         else:
             # Edited: post corrections so ledger + stock match the new amounts.
             sync_purchase(purchase, self.request.user)
