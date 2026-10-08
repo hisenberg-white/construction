@@ -17,8 +17,12 @@ def client_ip(request):
 
 
 def log_action(request, action, *, instance=None, model_name=None, object_id=None,
-               tenant=None, before=None, after=None):
-    """Write an AuditLog row. Safe to call from anywhere."""
+               tenant=None, before=None, after=None, use_request_tenant=True):
+    """Write an AuditLog row. Safe to call from anywhere.
+
+    ``use_request_tenant=False`` stops falling back to the company the request is
+    working in (used for login/logout, which belong to the user's own company).
+    """
     try:
         user = getattr(request, 'user', None)
         user = user if (user is not None and user.is_authenticated) else None
@@ -34,7 +38,7 @@ def log_action(request, action, *, instance=None, model_name=None, object_id=Non
                         tenant = instance
             if after is None:
                 after = {'repr': str(instance)}
-        if tenant is None:
+        if tenant is None and use_request_tenant:
             tenant = getattr(request, 'tenant', None)
 
         AuditLog.objects.create(
