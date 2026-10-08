@@ -320,7 +320,7 @@ class LedgerPaperView(TenantRequiredMixin, PermissionRequiredMixin, TemplateView
             # Running balance computed from the entries (opening + Dr − Cr),
             # carried over from earlier pages when paginated.
             running = opening + sum(
-                (d - c) for d, c in rows[:page_obj.start_index() - 1].values_list('debit', 'credit'))
+                (d - c) for d, c in rows[:max(page_obj.start_index() - 1, 0)].values_list('debit', 'credit'))
             if brought_forward:
                 opening = running
             for e in page_obj.object_list:

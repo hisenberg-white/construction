@@ -145,7 +145,7 @@ class StockLedgerBookView(TenantRequiredMixin, PermissionRequiredMixin, Template
             }
             # Running balance per row, carried over from earlier pages.
             running = opening + sum(
-                (i - o) for i, o in rows[:page_obj.start_index() - 1].values_list('qty_in', 'qty_out'))
+                (i - o) for i, o in rows[:max(page_obj.start_index() - 1, 0)].values_list('qty_in', 'qty_out'))
             if brought_forward:
                 opening = running
             for e in page_obj.object_list:
