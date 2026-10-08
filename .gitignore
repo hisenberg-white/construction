@@ -125,14 +125,12 @@ dmypy.json
 # PyCharm
 .idea/
 
-# Media files (user uploaded files, not the Django app)
-**/media/files/
-**/media/uploads/
-# Keep the media Django app code tracked
-# media/  # <-- This was too broad and ignored the Django app
+# Media: user uploads (logos, reference images, ID scans) — never commit.
+/media/
 
-# Static files (collected)
-staticfiles/
+# Static files collected by `manage.py collectstatic` (rebuilt on deploy).
+# The source /static/ folder (favicon etc.) stays tracked: collectstatic needs it.
+/staticfiles/
 
 # Logs
 logs/

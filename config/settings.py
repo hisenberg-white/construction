@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -23,7 +24,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-j!_n#-c4#my0i9^n^%6xqo-9*nh-8%b_u)2o^_=e(=buq7bwxm'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Production sets DJANGO_DEBUG=False (e.g. in the PythonAnywhere WSGI file) so
+# visitors get the friendly 404/500 pages instead of Django's debug screens.
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True').strip().lower() in ('1', 'true', 'yes', 'on')
 
 ALLOWED_HOSTS = [
     'shrrrrdh.pythonanywhere.com',
@@ -186,3 +189,21 @@ AUTH_USER_MODEL = 'accounts.User'
 LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'reports:dashboard'
 LOGOUT_REDIRECT_URL = 'accounts:login'
+
+
+# Logging: with DEBUG off Django prints nothing for server errors by default.
+# Send errors (with tracebacks) to stderr so they land in the server error log
+# (PythonAnywhere: Web tab -> "Error log") for the admin to look up.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {'format': '[{asctime}] {levelname} {name}: {message}', 'style': '{'},
+    },
+    'handlers': {
+        'console': {'class': 'logging.StreamHandler', 'formatter': 'verbose'},
+    },
+    'loggers': {
+        'django': {'handlers': ['console'], 'level': 'WARNING'},
+    },
+}

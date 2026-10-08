@@ -1,29 +1,174 @@
 {% extends 'base.html' %}
-{% load i18n %}
-{% block title %}{% trans "Sign in" %} — DepotLedger SaaS{% endblock %}
+{% load i18n static %}
+{% block title %}{% trans "Sign in" %} — DepotLedger{% endblock %}
+{% block body_class %}dl-auth{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Full-screen split layout (overrides the narrow container used for guests). */
+  .dl-auth main > .container { max-width:none; padding:0 !important; }
+  .dl-auth main > .container > .alert { margin:1rem; }
+  .dl-auth-wrap { min-height:100vh; display:flex; }
+
+  /* Brand panel */
+  .dl-auth-brand {
+    flex:1 1 55%; position:relative; overflow:hidden; color:#fff;
+    background:radial-gradient(circle at 15% 20%, #3b82f6 0%, transparent 45%),
+               radial-gradient(circle at 85% 80%, #1e40af 0%, transparent 50%),
+               linear-gradient(135deg, #1d4ed8 0%, #0b1220 100%);
+    padding:3rem; display:flex; flex-direction:column; justify-content:space-between;
+  }
+  .dl-auth-brand::after { /* soft grid texture */
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.08;
+    background-image:linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px);
+    background-size:40px 40px;
+  }
+  .dl-auth-brand > * { position:relative; z-index:1; }
+  .dl-auth-logo { display:flex; align-items:center; gap:.75rem; font-weight:700; font-size:1.35rem; letter-spacing:-.02em; }
+  .dl-auth-logo img { width:44px; height:44px; filter:drop-shadow(0 6px 14px rgba(0,0,0,.25)); }
+  .dl-auth-hero h2 { font-size:clamp(1.8rem, 3vw, 2.6rem); font-weight:800; line-height:1.15; letter-spacing:-.02em; max-width:30rem; }
+  .dl-auth-hero p { color:rgba(255,255,255,.75); font-size:1.05rem; max-width:28rem; }
+  .dl-auth-features { list-style:none; padding:0; margin:2rem 0 0; display:grid; gap:1rem; max-width:28rem; }
+  .dl-auth-features li { display:flex; gap:.85rem; align-items:flex-start; }
+  .dl-auth-features i {
+    flex:0 0 2.4rem; height:2.4rem; border-radius:.65rem; display:inline-flex; align-items:center; justify-content:center;
+    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); font-size:1.1rem;
+  }
+  .dl-auth-features strong { display:block; }
+  .dl-auth-features span { color:rgba(255,255,255,.7); font-size:.9rem; }
+  .dl-auth-foot { color:rgba(255,255,255,.55); font-size:.82rem; }
+
+  /* Form panel */
+  .dl-auth-panel { flex:1 1 45%; display:flex; align-items:center; justify-content:center; padding:2rem 1.25rem; background:#f8fafc; }
+  .dl-auth-card { width:100%; max-width:400px; }
+  .dl-auth-card .card { border:1px solid #e7ecf3; border-radius:1rem; box-shadow:0 20px 45px -20px rgba(15,23,42,.25); }
+  .dl-auth-card .input-group-text { background:#fff; color:#94a3b8; border-color:#dbe2ea; }
+  .dl-auth-card .input-group .form-control { border-left:0; }
+  .dl-auth-card .input-group:focus-within .input-group-text { border-color:#93c5fd; color:var(--dl-accent); }
+  .dl-auth-card .btn-toggle-pw { border-color:#dbe2ea; color:#94a3b8; background:#fff; }
+  .dl-auth-card .btn-toggle-pw:hover { color:var(--dl-accent); }
+  .dl-auth-mobile-logo { display:none; }
+
+  @media (max-width:991.98px) {
+    .dl-auth-wrap { flex-direction:column; }
+    .dl-auth-brand { display:none; }
+    .dl-auth-panel { flex:1; align-items:flex-start; padding-top:3rem;
+      background:linear-gradient(180deg, #1d4ed8 0, #1d4ed8 210px, #f8fafc 210px); }
+    .dl-auth-mobile-logo { display:flex; flex-direction:column; align-items:center; color:#fff; margin-bottom:1.5rem; text-align:center; }
+    .dl-auth-mobile-logo img { width:56px; height:56px; margin-bottom:.5rem; filter:drop-shadow(0 6px 14px rgba(0,0,0,.25)); }
+    .dl-auth-mobile-logo div { font-weight:700; font-size:1.35rem; letter-spacing:-.02em; }
+    .dl-auth-mobile-logo small { color:rgba(255,255,255,.8); }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-5 col-lg-4">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h1 class="h4 mb-3 text-center">DepotLedger SaaS</h1>
-        {% if form.errors %}
-          <div class="alert alert-danger">{% trans "Invalid username or password." %}</div>
-        {% endif %}
-        <form method="post">
-          {% csrf_token %}
-          <div class="mb-3">
-            <label class="form-label" for="id_username">{% trans "Username" %}</label>
-            <input class="form-control" type="text" name="username" id="id_username" autofocus required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label" for="id_password">{% trans "Password" %}</label>
-            <input class="form-control" type="password" name="password" id="id_password" required>
-          </div>
-          <button class="btn btn-primary w-100" type="submit">{% trans "Sign in" %}</button>
-        </form>
-      </div>
+<div class="dl-auth-wrap">
+
+  {# ---- Brand panel (desktop) ---- #}
+  <section class="dl-auth-brand">
+    <div class="dl-auth-logo">
+      <img src="{% static 'img/favicon.svg' %}" alt="">
+      DepotLedger
     </div>
-  </div>
+
+    <div class="dl-auth-hero">
+      <h2>{% trans "Run your construction depot from one place." %}</h2>
+      <p>{% trans "Sales, purchases, stock and customer credit — always up to date, on any device." %}</p>
+      <ul class="dl-auth-features">
+        <li><i class="bi bi-receipt"></i>
+          <div><strong>{% trans "Invoices & payments" %}</strong>
+            <span>{% trans "Branded bills with QR, sent by email, SMS or WhatsApp." %}</span></div></li>
+        <li><i class="bi bi-boxes"></i>
+          <div><strong>{% trans "Live stock" %}</strong>
+            <span>{% trans "Know what's in every depot and get low-stock alerts." %}</span></div></li>
+        <li><i class="bi bi-journal-check"></i>
+          <div><strong>{% trans "Ledgers & reports" %}</strong>
+            <span>{% trans "Customer and supplier balances, profit and expenses." %}</span></div></li>
+      </ul>
+    </div>
+
+    <div class="dl-auth-foot">&copy; {% now "Y" %} DepotLedger</div>
+  </section>
+
+  {# ---- Sign-in panel ---- #}
+  <section class="dl-auth-panel">
+    <div class="dl-auth-card">
+      <div class="dl-auth-mobile-logo">
+        <img src="{% static 'img/favicon.svg' %}" alt="">
+        <div>DepotLedger</div>
+        <small>{% trans "Construction depot management" %}</small>
+      </div>
+
+      <div class="card">
+        <div class="card-body p-4 p-sm-5">
+          <h1 class="h4 fw-bold mb-1">{% trans "Welcome back" %} 👋</h1>
+          <p class="text-muted mb-4">{% trans "Sign in to continue to your account." %}</p>
+
+          {% if form.errors %}
+            <div class="alert alert-danger d-flex align-items-center py-2">
+              <i class="bi bi-exclamation-circle me-2"></i>{% trans "Invalid username or password." %}
+            </div>
+          {% endif %}
+
+          <form method="post" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
+            <div class="mb-3">
+              <label class="form-label" for="id_username">{% trans "Username" %}</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                <input class="form-control" type="text" name="username" id="id_username"
+                       value="{{ form.username.value|default:'' }}" autocomplete="username"
+                       autocapitalize="none" autofocus required>
+              </div>
+            </div>
+            <div class="mb-4">
+              <label class="form-label" for="id_password">{% trans "Password" %}</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                <input class="form-control border-end-0" type="password" name="password" id="id_password"
+                       autocomplete="current-password" required>
+                <button class="btn btn-toggle-pw border-start-0" type="button" id="dlTogglePw"
+                        aria-label="{% trans 'Show password' %}" title="{% trans 'Show password' %}">
+                  <i class="bi bi-eye"></i></button>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-lg w-100 fw-semibold" type="submit">
+              {% trans "Sign in" %} <i class="bi bi-arrow-right ms-1"></i></button>
+          </form>
+
+          <form action="{% url 'set_language' %}" method="post" class="mt-4 d-flex justify-content-center">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            {% get_current_language as LANGUAGE_CODE %}{% get_available_languages as LANGUAGES %}
+            <div class="input-group input-group-sm" style="max-width:12rem">
+              <span class="input-group-text"><i class="bi bi-translate"></i></span>
+              <select name="language" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="{% trans 'Language' %}">
+                {% for code, name in LANGUAGES %}
+                  <option value="{{ code }}"{% if code == LANGUAGE_CODE %} selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </form>
+        </div>
+      </div>
+      <p class="text-center text-muted small mt-4 mb-0">{% trans "Trouble signing in? Contact your administrator." %}</p>
+    </div>
+  </section>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    const btn = document.getElementById('dlTogglePw'), pw = document.getElementById('id_password');
+    if (!btn || !pw) return;
+    btn.addEventListener('click', function () {
+      const show = pw.type === 'password';
+      pw.type = show ? 'text' : 'password';
+      btn.querySelector('i').className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
+    });
+  })();
+</script>
 {% endblock %}

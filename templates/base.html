@@ -128,7 +128,7 @@
   </style>
   {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
 {% if user.is_authenticated %}
 <nav class="navbar dl-topbar fixed-top px-2 px-sm-3 flex-nowrap">
   <div class="d-flex align-items-center min-w-0">
