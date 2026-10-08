@@ -198,8 +198,19 @@ class TenantScopedQuerysetMixin:
         return qs
 
 
-class CrudListView(TenantRequiredMixin, PermissionRequiredMixin, CrudContextMixin,
-                   TenantScopedQuerysetMixin, ListView):
+class LenientPaginationMixin:
+    """Out-of-range or invalid ``?page=`` shows the last/first page instead of
+    a 404 (e.g. after deleting the only record on the last page)."""
+
+    def paginate_queryset(self, queryset, page_size):
+        paginator = self.get_paginator(queryset, page_size,
+                                       allow_empty_first_page=self.get_allow_empty())
+        page = paginator.get_page(self.request.GET.get(self.page_kwarg))
+        return paginator, page, page.object_list, page.has_other_pages()
+
+
+class CrudListView(LenientPaginationMixin, TenantRequiredMixin, PermissionRequiredMixin,
+                   CrudContextMixin, TenantScopedQuerysetMixin, ListView):
     permission_action = 'r'
     template_name = 'core/object_list.html'
     paginate_by = 25
@@ -296,7 +307,7 @@ class CrudCancelView(TenantRequiredMixin, PermissionRequiredMixin, CrudContextMi
 
 
 # --- SaaS-global CRUD bases (not tenant-scoped) ------------------------------
-class SaaSListView(PermissionRequiredMixin, CrudContextMixin, ListView):
+class SaaSListView(LenientPaginationMixin, PermissionRequiredMixin, CrudContextMixin, ListView):
     permission_module = permissions.SAAS
     permission_action = 'r'
     template_name = 'core/object_list.html'

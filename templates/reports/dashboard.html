@@ -2,7 +2,26 @@
 {% load i18n %}
 {% block title %}{% trans "Dashboard" %} — DepotLedger SaaS{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<style>
+  /* Dashboard-only: slightly smaller type than the rest of the app. */
+  .dl-dashboard .page-title { font-size:1.45rem; }
+  .dl-dashboard > .dl-dash-head p { font-size:.88rem; }
+  .dl-dashboard .stat-card .card-body { padding:.85rem 1rem; }
+  .dl-dashboard .stat-card .stat-icon { width:2.6rem; height:2.6rem; font-size:1.15rem; }
+  .dl-dashboard .stat-card .small { font-size:.7rem; }
+  .dl-dashboard .stat-card .h5 { font-size:1.05rem; }
+  .dl-dashboard .stat-card .h4 { font-size:1.2rem; }
+  .dl-dashboard .card-header { font-size:.9rem; }
+  .dl-dashboard .alert { font-size:.88rem; }
+  .dl-dashboard .card-body > p { font-size:.88rem; }
+  @media (max-width:575.98px) {
+    .dl-dashboard .stat-card .card-body { flex-direction:column; align-items:flex-start !important; gap:.5rem; padding:.75rem; }
+    .dl-dashboard .stat-card .stat-icon { margin-right:0 !important; width:2.2rem; height:2.2rem; font-size:1rem; }
+    .dl-dashboard .stat-card .h5 { font-size:1rem; white-space:nowrap; }
+  }
+</style>
+<div class="dl-dashboard">
+<div class="d-flex justify-content-between align-items-center mb-4 dl-dash-head">
   <div>
     <h1 class="h3 page-title mb-1">{% trans "Dashboard" %}</h1>
     <p class="text-muted mb-0">{% if current_tenant %}{{ current_tenant }}{% else %}{% trans "SaaS overview" %}{% endif %}</p>
@@ -24,6 +43,24 @@
   {% endfor %}
 </div>
 {% else %}
+
+{% if low_stock %}
+<div class="alert alert-warning shadow-sm d-flex flex-wrap align-items-start gap-2">
+  <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+  <div class="flex-grow-1">
+    <div class="fw-semibold mb-1">{% blocktrans count n=low_stock|length %}{{ n }} item is low or out of stock{% plural %}{{ n }} items are low or out of stock{% endblocktrans %}</div>
+    <ul class="mb-0 small">
+      {% for a in low_stock|slice:":5" %}
+      <li><strong>{{ a.material.name }}</strong> @ {{ a.depot.name }}: {{ a.qty|floatformat:"-3" }} {{ a.material.base_unit }}
+        {% if a.status == 'negative' %}<span class="badge text-bg-dark">{% trans "Negative" %}</span>
+        {% elif a.status == 'out' %}<span class="badge text-bg-danger">{% trans "Out of stock" %}</span>
+        {% else %}<span class="text-muted">({% trans "reorder at" %} {{ a.reorder_level|floatformat:"-3" }})</span>{% endif %}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  <a class="btn btn-sm btn-warning text-nowrap" href="{% url 'inventory:stock_summary' %}?show=alerts">{% trans "View stock" %}</a>
+</div>
+{% endif %}
 
 <div class="row g-3">
   {% for card in cards %}
@@ -57,24 +94,29 @@
   {% endfor %}
 </div>
 
+<style>
+  .dl-chart { position: relative; height: 380px; }
+  @media (max-width: 576px) { .dl-chart { height: 280px; } }
+</style>
 <div class="row g-3 mt-0">
   <div class="col-lg-8">
     <div class="card shadow-sm h-100">
       <div class="card-header bg-white fw-semibold">{% trans "Sales & Profit — last 30 days" %}</div>
-      <div class="card-body"><canvas id="chartSalesProfit" height="110"></canvas></div>
+      <div class="card-body"><div class="dl-chart"><canvas id="chartSalesProfit"></canvas></div></div>
     </div>
   </div>
   <div class="col-lg-4">
     <div class="card shadow-sm h-100">
       <div class="card-header bg-white fw-semibold">{% trans "Expenses by category (this month)" %}</div>
       <div class="card-body">
-        {% if has_expense_breakdown %}<canvas id="chartExpenses" height="220"></canvas>
+        {% if has_expense_breakdown %}<div class="dl-chart"><canvas id="chartExpenses"></canvas></div>
         {% else %}<p class="text-muted mb-0">{% trans "No expenses this month." %}</p>{% endif %}
       </div>
     </div>
   </div>
 </div>
 {% endif %}
+</div>{# /.dl-dashboard #}
 {% endblock %}
 
 {% block extra_js %}
@@ -86,6 +128,7 @@
   const sales = {{ chart_sales|safe }};
   const profit = {{ chart_profit|safe }};
   const sp = document.getElementById('chartSalesProfit');
+  if (window.Chart) { Chart.defaults.font.size = 11; }
   if (sp && window.Chart) {
     new Chart(sp, {
       type: 'line',
@@ -94,8 +137,12 @@
         { label: 'Profit', data: profit, borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,.10)', fill: true, tension: .3 },
       ]},
       options: { responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
         plugins: { legend: { position: 'top' } },
-        scales: { y: { beginAtZero: true } } }
+        scales: {
+          x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
+          y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() } },
+        } }
     });
   }
   {% if has_expense_breakdown %}

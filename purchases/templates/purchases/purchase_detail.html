@@ -40,7 +40,8 @@
     </div>
   </div>
 
-  <table class="table table-bordered align-middle">
+  <div class="table-responsive mb-3">
+  <table class="table table-bordered align-middle mb-0">
     <thead class="table-light">
       <tr>
         <th>{% trans "Material" %}</th><th>{% trans "Vehicle" %}</th>
@@ -58,6 +59,7 @@
       </tr>
     </tbody>
   </table>
+  </div>
 
   <table class="dl-doc-totals">
     <tr><td class="text-muted">{% trans "Material cost" %}</td><td class="text-end">{{ obj.material_cost }}</td></tr>

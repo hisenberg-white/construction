@@ -11,10 +11,13 @@ under clean namespaces. Layout follows SRS section 12.3:
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.templatetags.static import static as static_url
 from django.urls import include, path
 from django.views.generic import RedirectView
 
 urlpatterns = [
+    # Browsers request /favicon.ico directly (also from pages without base.html).
+    path('favicon.ico', RedirectView.as_view(url=static_url('img/favicon.ico'), permanent=True)),
     path('admin/', admin.site.urls),
     path('i18n/', include('django.conf.urls.i18n')),  # set_language view
     path('', include('accounts.urls')),

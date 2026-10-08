@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load i18n form_extras %}
+{% load i18n form_extras pagination %}
 {% block title %}{% trans "Ledger" %} — DepotLedger{% endblock %}
 {% block content %}
 
@@ -65,7 +65,7 @@
       <tbody>
         {% if single_account %}
         <tr class="table-light fst-italic">
-          <td>—</td><td>{% trans "Opening Balance" %}</td><td></td><td></td>
+          <td>—</td><td>{% if brought_forward %}{% trans "Brought forward" %}{% else %}{% trans "Opening Balance" %}{% endif %}</td><td></td><td></td>
           <td class="text-end"></td><td class="text-end"></td>
           <td class="text-end">{{ opening_balance }}</td>
         </tr>
@@ -74,7 +74,7 @@
         <tr>
           <td>{% if use_bs %}{{ e.entry_date|npdate:False }}{% else %}{{ e.entry_date|date:'Y-m-d' }}{% endif %}</td>
           <td>{{ e.description|default:'—' }}</td>
-          <td>{{ e.get_account_type_display }}{% if e.account_id %} #{{ e.account_id }}{% endif %}</td>
+          <td>{{ e.account_name }}</td>
           <td class="text-muted small">{{ e.reference_type|default:'' }}{% if e.reference_id %} #{{ e.reference_id }}{% endif %}</td>
           <td class="text-end">{% if e.debit %}{{ e.debit }}{% endif %}</td>
           <td class="text-end">{% if e.credit %}{{ e.credit }}{% endif %}</td>
@@ -86,7 +86,7 @@
       </tbody>
       <tfoot class="table-light fw-bold">
         <tr>
-          <td colspan="4" class="text-end">{% trans "Totals" %}</td>
+          <td colspan="4" class="text-end">{% if is_paginated %}{% trans "Totals (all pages)" %}{% else %}{% trans "Totals" %}{% endif %}</td>
           <td class="text-end">{{ total_debit }}</td>
           <td class="text-end">{{ total_credit }}</td>
           <td></td>
@@ -95,5 +95,6 @@
     </table>
   </div>
 </div>
+{% pagination page_obj %}
 {% endif %}
 {% endblock %}

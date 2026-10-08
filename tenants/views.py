@@ -27,8 +27,10 @@ from core.crud import (
     SaaSUpdateView,
 )
 
-from .forms import CompanySettingsForm, DepotForm, EmailConfigForm, TenantCompanyForm
-from .models import DepotLocation, TenantCompany, TenantEmailConfig
+from .forms import (
+    CompanySettingsForm, DepotForm, EmailConfigForm, MessagingConfigForm, TenantCompanyForm,
+)
+from .models import DepotLocation, TenantCompany, TenantEmailConfig, TenantMessagingConfig
 
 
 @login_required
@@ -180,6 +182,39 @@ class EmailConfigView(PermissionRequiredMixin, CrudContextMixin, UpdateView):
 
     def form_valid(self, form):
         messages.success(self.request, 'Email settings saved.')
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse('reports:dashboard')
+
+
+class MessagingConfigView(PermissionRequiredMixin, CrudContextMixin, UpdateView):
+    """Edit the tenant's SMS / WhatsApp gateway settings (SRS FR-16)."""
+
+    model = TenantMessagingConfig
+    permission_module = permissions.COMPANY_SETTINGS
+    permission_action = 'u'
+    crud_basename = 'depot'
+    form_class = MessagingConfigForm
+    template_name = 'core/object_form.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and request.tenant is None:
+            messages.info(request, 'SMS / WhatsApp settings are configured per company.')
+            return redirect('tenants:client_list')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_object(self, queryset=None):
+        config, _ = TenantMessagingConfig.objects.get_or_create(tenant=self.request.tenant)
+        return config
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['verbose_name'] = 'SMS / WhatsApp Settings'
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, 'SMS / WhatsApp settings saved.')
         return super().form_valid(form)
 
     def get_success_url(self):

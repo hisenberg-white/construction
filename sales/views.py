@@ -29,6 +29,7 @@ from ledger.forms import RecordPaymentForm
 from ledger.models import Payment
 from ledger.services import LedgerService
 from subscriptions.services import SubscriptionService
+from tenants.messaging import MessagingError, send_sms, send_whatsapp
 
 from .forms import DeliveryLogForm, SaleInvoiceForm, SaleInvoiceLineFormSet
 from .models import DeliveryLog, SaleInvoice
@@ -320,6 +321,87 @@ class DeliveryLogCreateView(TenantRequiredMixin, PermissionRequiredMixin, CrudCo
                        after={'method': log.get_method_display(), 'recipient': log.recipient})
             messages.success(request, 'Delivery logged.')
         return redirect('sales:invoice_detail', pk=invoice.pk)
+
+
+class _InvoiceMessageView(TenantRequiredMixin, PermissionRequiredMixin, View):
+    """Send the invoice summary + public link by SMS / WhatsApp through the
+    tenant's own gateway account (SRS FR-16)."""
+
+    permission_module = MODULE
+    permission_action = 'u'
+    http_method_names = ['post']
+    method = None          # DeliveryLog.Method value
+    label = None
+
+    def is_ready(self, config):
+        raise NotImplementedError
+
+    def send(self, config, phone, text, params):
+        raise NotImplementedError
+
+    def post(self, request, pk):
+        invoice = _invoice_for_request(request, pk)
+        config = getattr(invoice.tenant, 'messaging_config', None)
+        if config is None or not self.is_ready(config):
+            messages.error(request, f'Set up {self.label} in SMS / WhatsApp Settings before sending.')
+            return redirect('sales:invoice_detail', pk=pk)
+        phone = (invoice.customer.phone or '').strip()
+        if not phone:
+            messages.error(request, 'This customer has no phone number on file.')
+            return redirect('sales:invoice_detail', pk=pk)
+
+        link = request.build_absolute_uri(
+            reverse('sales:invoice_public', args=[bill_token(invoice.pk, INVOICE_SALT)]))
+        amount = f'{invoice.tenant.default_currency} {invoice.total}'
+        text = (f'Dear {invoice.customer.name}, invoice {invoice.invoice_no} of {amount} '
+                f'(due: {invoice.due}) from {invoice.tenant.name}. View: {link}')
+        params = [invoice.customer.name, invoice.invoice_no, amount, link]
+
+        status = DeliveryLog.DeliveryStatus.SENT
+        try:
+            self.send(config, phone, text, params)
+            messages.success(request, f'Invoice sent by {self.label} to {phone}.')
+        except MessagingError as exc:
+            status = DeliveryLog.DeliveryStatus.FAILED
+            messages.error(request, f'{self.label} failed: {exc}')
+
+        DeliveryLog.objects.create(
+            tenant=invoice.tenant, invoice=invoice, method=self.method,
+            recipient=phone, delivery_status=status,
+            created_by=request.user, updated_by=request.user)
+        log_action(request, 'email', instance=invoice,
+                   after={'method': self.label, 'to': phone, 'status': status})
+        if status == DeliveryLog.DeliveryStatus.SENT:
+            self.after_sent(invoice)
+        return redirect('sales:invoice_detail', pk=pk)
+
+    def after_sent(self, invoice):
+        pass
+
+
+class InvoiceSMSView(_InvoiceMessageView):
+    method = DeliveryLog.Method.SMS
+    label = 'SMS'
+
+    def is_ready(self, config):
+        return config.sms_ready
+
+    def send(self, config, phone, text, params):
+        send_sms(config, phone, text)
+
+    def after_sent(self, invoice):
+        SubscriptionService.record_sms_usage(tenant=invoice.tenant)
+
+
+class InvoiceWhatsAppView(_InvoiceMessageView):
+    method = DeliveryLog.Method.WHATSAPP
+    label = 'WhatsApp'
+
+    def is_ready(self, config):
+        return config.whatsapp_ready
+
+    def send(self, config, phone, text, params):
+        send_whatsapp(config, phone, text, template_params=params)
 
 
 class InvoicePDFView(TenantRequiredMixin, PermissionRequiredMixin, View):

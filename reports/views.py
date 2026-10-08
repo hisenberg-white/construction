@@ -18,6 +18,7 @@ from django.views.generic import TemplateView
 from core import permissions as perms
 from expenses.models import Expense
 from inventory.models import MaterialItem, StockLedger, Vehicle
+from inventory.services import StockService
 from ledger.models import Payment
 from purchases.models import Purchase
 from sales.models import SaleInvoice, SaleInvoiceLine
@@ -142,6 +143,9 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['chart_exp_labels'] = json.dumps(exp_labels)
         context['chart_exp_data'] = json.dumps(exp_data)
         context['has_expense_breakdown'] = bool(exp_data)
+        # Low / out-of-stock warning so stock needn't be checked at the warehouse.
+        if perms.has_perm(self.request.user, perms.STOCK, 'r'):
+            context['low_stock'] = StockService.low_stock(tenant)
         return context
 
 

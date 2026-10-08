@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load i18n form_extras %}
+{% load i18n form_extras pagination %}
 {% block title %}{% trans "Stock Ledger" %} — DepotLedger{% endblock %}
 {% block content %}
 
@@ -61,7 +61,7 @@
       <tbody>
         {% if single_account %}
         <tr class="table-light fst-italic">
-          <td>—</td><td></td><td></td><td>{% trans "Opening Balance" %}</td><td></td>
+          <td>—</td><td></td><td></td><td>{% if brought_forward %}{% trans "Brought forward" %}{% else %}{% trans "Opening Balance" %}{% endif %}</td><td></td>
           <td class="text-end"></td><td class="text-end"></td>
           <td class="text-end">{{ opening_balance }}</td>
         </tr>
@@ -83,7 +83,7 @@
       </tbody>
       <tfoot class="table-light fw-bold">
         <tr>
-          <td colspan="5" class="text-end">{% trans "Totals" %}</td>
+          <td colspan="5" class="text-end">{% if is_paginated %}{% trans "Totals (all pages)" %}{% else %}{% trans "Totals" %}{% endif %}</td>
           <td class="text-end">{{ total_in }}</td>
           <td class="text-end">{{ total_out }}</td>
           <td></td>
@@ -92,4 +92,5 @@
     </table>
   </div>
 </div>
+{% pagination page_obj %}
 {% endblock %}

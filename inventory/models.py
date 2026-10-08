@@ -21,6 +21,10 @@ class MaterialItem(TenantOwnedModel):
     )
     default_purchase_rate = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     default_sale_rate = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    reorder_level = models.DecimalField(
+        max_digits=14, decimal_places=3, default=0,
+        help_text='Warn when stock in a depot falls to or below this (base unit). 0 = no warning.',
+    )
     stock_enabled = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
 

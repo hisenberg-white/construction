@@ -19,6 +19,10 @@ urlpatterns = [
          views.InvoicePDFView.as_view(), name='invoice_pdf'),
     path('app/sales/invoices/<int:pk>/email/',
          views.InvoiceEmailView.as_view(), name='invoice_email'),
+    path('app/sales/invoices/<int:pk>/sms/',
+         views.InvoiceSMSView.as_view(), name='invoice_sms'),
+    path('app/sales/invoices/<int:pk>/whatsapp/',
+         views.InvoiceWhatsAppView.as_view(), name='invoice_whatsapp'),
     path('app/sales/invoices/<int:pk>/record-payment/',
          views.InvoicePaymentView.as_view(), name='invoice_payment'),
     # Public (no-login) bill opened via the QR's signed token.

@@ -1,3 +1,5 @@
+from django.urls import path
+
 from core.crud import crud_urlpatterns
 
 from . import views
@@ -35,6 +37,8 @@ urlpatterns = [
         detail=views.CapacityRuleDetailView, update=views.CapacityRuleUpdateView,
         delete=views.CapacityRuleDeleteView,
     ),
+    # Current stock on hand + reorder warnings.
+    path('app/stock-summary/', views.StockSummaryView.as_view(), name='stock_summary'),
     # Stock ledger is append-only: ledger-book view + detail + manual adjustment.
     *crud_urlpatterns(
         'app/stock', 'stock',

@@ -5,6 +5,7 @@ from django.db import models
 
 from core.constants import PaymentStatus
 from core.models import CancellableModel, TenantOwnedModel
+from core.uploads import ReferenceImagePath
 
 
 class SaleInvoice(TenantOwnedModel, CancellableModel):
@@ -35,7 +36,7 @@ class SaleInvoice(TenantOwnedModel, CancellableModel):
     )
     notes = models.TextField(blank=True)
     reference_image = models.ImageField(
-        upload_to='references/invoices/%Y/%m/', blank=True, null=True,
+        upload_to=ReferenceImagePath('invoices', 'invoice_no'), blank=True, null=True,
         help_text='Optional photo of the bill / reference.')
 
     class Meta:

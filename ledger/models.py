@@ -9,6 +9,7 @@ from django.db import models
 
 from core.constants import LedgerAccountType, PartyType, PaymentMethod
 from core.models import CancellableModel, TenantOwnedModel
+from core.uploads import ReferenceImagePath
 
 
 class Payment(TenantOwnedModel, CancellableModel):
@@ -44,7 +45,7 @@ class Payment(TenantOwnedModel, CancellableModel):
     reference_no = models.CharField(max_length=80, blank=True)
     notes = models.TextField(blank=True)
     reference_image = models.ImageField(
-        upload_to='references/payments/%Y/%m/', blank=True, null=True,
+        upload_to=ReferenceImagePath('payments', 'reference_no'), blank=True, null=True,
         help_text='Optional photo of the voucher / reference.')
     # Source bill this payment was recorded against (sale_invoice / purchase).
     reference_type = models.CharField(max_length=40, blank=True)

@@ -3,6 +3,7 @@ from django.db import models
 
 from core.constants import PaymentMethod
 from core.models import CancellableModel, TenantOwnedModel
+from core.uploads import ReferenceImagePath
 
 
 class ExpenseCategory(TenantOwnedModel):
@@ -54,7 +55,7 @@ class Expense(TenantOwnedModel, CancellableModel):
     )
     notes = models.TextField(blank=True)
     reference_image = models.ImageField(
-        upload_to='references/expenses/%Y/%m/', blank=True, null=True,
+        upload_to=ReferenceImagePath('expenses'), blank=True, null=True,
         help_text='Optional photo of the receipt / reference.')
 
     class Meta:

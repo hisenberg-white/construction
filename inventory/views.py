@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.views.generic import FormView, TemplateView
 
 from core import permissions
+from core.pagination import paginate
 from core.crud import (
     CrudContextMixin,
     CrudCreateView,
@@ -130,9 +131,16 @@ class StockLedgerBookView(TenantRequiredMixin, PermissionRequiredMixin, Template
         rows = qs.filter(created_at__date__gte=date_from, created_at__date__lte=date_to) \
                  .order_by('created_at', 'id')
         totals = rows.aggregate(i=Sum('qty_in'), o=Sum('qty_out'))
+        page_obj, is_paginated = paginate(self.request, rows)
+        brought_forward = page_obj.number > 1
+        if single and brought_forward:
+            # Balance carried over from the last row of the previous page.
+            opening = rows[page_obj.start_index() - 2].balance_after
         context.update({
             'company': tenant,
-            'entries': rows,
+            'entries': page_obj.object_list,
+            'page_obj': page_obj, 'is_paginated': is_paginated,
+            'brought_forward': brought_forward,
             'date_from': date_from, 'date_to': date_to,
             'depots': DepotLocation.objects.filter(tenant=tenant) if tenant else DepotLocation.objects.none(),
             'materials': MaterialItem.objects.filter(tenant=tenant) if tenant else MaterialItem.objects.none(),
@@ -140,6 +148,59 @@ class StockLedgerBookView(TenantRequiredMixin, PermissionRequiredMixin, Template
             'single_account': single, 'opening_balance': opening,
             'total_in': totals['i'] or 0, 'total_out': totals['o'] or 0,
             'can_adjust': permissions.has_perm(self.request.user, STOCK, 'c'),
+        })
+        return context
+
+
+class StockSummaryView(TenantRequiredMixin, PermissionRequiredMixin, TemplateView):
+    """Current stock on hand per material and depot, with reorder warnings —
+    so stock can be checked here instead of at the warehouse (SRS FR-09)."""
+
+    permission_module = STOCK
+    permission_action = 'r'
+    template_name = 'inventory/stock_summary.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = self.request.tenant
+        depots = list(DepotLocation.objects.filter(tenant=tenant, is_active=True))
+        depot_id = self.request.GET.get('depot') or ''
+        if depot_id.isdigit():
+            depots = [d for d in depots if d.pk == int(depot_id)]
+        show = self.request.GET.get('show', '')
+        balances = StockService.on_hand(tenant)
+
+        rows, total_value = [], Decimal('0')
+        counts = {'ok': 0, 'low': 0, 'out': 0, 'negative': 0}
+        for m in MaterialItem.objects.for_tenant(tenant).filter(is_active=True, stock_enabled=True):
+            for d in depots:
+                qty = balances.get((d.pk, m.pk))
+                if qty is None and not m.reorder_level:
+                    continue  # never stocked in this depot
+                qty = qty or Decimal('0')
+                if qty < 0:
+                    status = 'negative'
+                elif qty == 0:
+                    status = 'out'
+                elif m.reorder_level and qty <= m.reorder_level:
+                    status = 'low'
+                else:
+                    status = 'ok'
+                counts[status] += 1
+                if show == 'alerts' and status == 'ok':
+                    continue
+                value = qty * (m.default_purchase_rate or 0)
+                total_value += value
+                rows.append({'material': m, 'depot': d, 'qty': qty, 'status': status,
+                             'value': value})
+        page_obj, is_paginated = paginate(self.request, rows)
+        context.update({
+            'company': tenant, 'rows': page_obj.object_list, 'counts': counts,
+            'total_value': total_value, 'page_obj': page_obj, 'is_paginated': is_paginated,
+            'depots': DepotLocation.objects.filter(tenant=tenant, is_active=True),
+            'depot_id': depot_id, 'show': show,
+            'currency': tenant.default_currency,
+            'today': timezone.localdate(),
         })
         return context
 

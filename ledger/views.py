@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.views.generic import TemplateView
 
 from core import permissions
+from core.pagination import paginate
 from core.constants import COMPANY_ACCOUNTS, LedgerAccountType, PartyType
 from core.crud import (
     CrudCancelView,
@@ -23,6 +24,7 @@ from core.crud import (
     TenantRequiredMixin,
 )
 from employees.models import Employee
+from inventory.models import Vehicle
 from parties.models import Customer, Supplier
 
 from .forms import PaymentForm
@@ -116,6 +118,37 @@ class PaymentCancelView(CrudCancelView):
 
 
 # --- Ledger entries (read-only) ----------------------------------------------
+# Per-party ledger accounts and the model whose name labels them.
+PARTY_ACCOUNT_MODELS = {
+    'customer': Customer,
+    'supplier': Supplier,
+    'employee': Employee,
+    'vehicle': Vehicle,
+}
+
+
+def _attach_account_names(entries):
+    """Set ``entry.account_name`` — e.g. "Ram sharma (Customer Account)" for
+    per-party rows, or the plain account label ("Sales Account") otherwise.
+    One query per party type on the page."""
+    entries = list(entries)
+    names = {}
+    for acc_type, model in PARTY_ACCOUNT_MODELS.items():
+        ids = {e.account_id for e in entries if e.account_type == acc_type and e.account_id}
+        if ids:
+            names[acc_type] = dict(model.objects.filter(pk__in=ids).values_list('pk', 'name'))
+    for e in entries:
+        label = e.get_account_type_display()
+        name = names.get(e.account_type, {}).get(e.account_id)
+        if name:
+            suffix = 'Account' if label.endswith('Account') else f'{label} Account'
+            e.account_name = f'{name} ({suffix})'
+        elif e.account_id:
+            e.account_name = f'{label} #{e.account_id}'
+        else:
+            e.account_name = label
+
+
 class LedgerPaperView(TenantRequiredMixin, PermissionRequiredMixin, TemplateView):
     """Account ledger styled like a ledger book (SRS FR-14).
 
@@ -222,8 +255,16 @@ class LedgerPaperView(TenantRequiredMixin, PermissionRequiredMixin, TemplateView
 
         rows = qs.filter(entry_date__gte=date_from, entry_date__lte=date_to).order_by('entry_date', 'id')
         totals = rows.aggregate(debit=Sum('debit'), credit=Sum('credit'))
+        page_obj, is_paginated = paginate(self.request, rows)
+        _attach_account_names(page_obj.object_list)
+        brought_forward = page_obj.number > 1
+        if single and brought_forward:
+            # Balance carried over from the last row of the previous page.
+            opening = rows[page_obj.start_index() - 2].balance_after
         context.update({
-            'entries': rows,
+            'entries': page_obj.object_list,
+            'page_obj': page_obj, 'is_paginated': is_paginated,
+            'brought_forward': brought_forward,
             'opening_balance': opening,
             'single_account': single,
             'total_debit': totals['debit'] or 0,

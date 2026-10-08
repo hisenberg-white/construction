@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load i18n form_extras pagination %}
+{% block title %}{% trans "Current Stock" %} — DepotLedger{% endblock %}
+{% block content %}
+
+<form method="get" class="card shadow-sm mb-3 dl-no-print" style="max-width:960px;margin:0 auto;">
+  <div class="card-body row g-2 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label">{% trans "Depot" %}</label>
+      <select name="depot" class="form-select">
+        <option value="">{% trans "All depots" %}</option>
+        {% for d in depots %}<option value="{{ d.pk }}"{% if depot_id == d.pk|stringformat:'s' %} selected{% endif %}>{{ d.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">{% trans "Show" %}</label>
+      <select name="show" class="form-select">
+        <option value="">{% trans "All items" %}</option>
+        <option value="alerts"{% if show == 'alerts' %} selected{% endif %}>{% trans "Only low / out of stock" %}</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-primary w-100"><i class="bi bi-funnel"></i> {% trans "Filter" %}</button>
+    </div>
+    <div class="col-md-2">
+      <button type="button" class="btn btn-outline-secondary w-100" onclick="window.print()"><i class="bi bi-printer"></i> {% trans "Print" %}</button>
+    </div>
+  </div>
+</form>
+
+<div class="d-flex flex-wrap gap-2 mb-3 dl-no-print" style="max-width:960px;margin:0 auto;">
+  <span class="badge text-bg-success fs-6 fw-normal">{% trans "In stock" %}: {{ counts.ok }}</span>
+  <span class="badge text-bg-warning fs-6 fw-normal">{% trans "Low" %}: {{ counts.low }}</span>
+  <span class="badge text-bg-danger fs-6 fw-normal">{% trans "Out of stock" %}: {{ counts.out }}</span>
+  {% if counts.negative %}<span class="badge text-bg-dark fs-6 fw-normal">{% trans "Negative" %}: {{ counts.negative }}</span>{% endif %}
+</div>
+
+<div class="dl-document">
+  {% include 'core/_doc_header.html' with company=company doc_title="Current Stock" %}
+  <div class="text-muted small mb-2">
+    {% trans "As of" %} {% if use_bs %}{{ today|npdate:False }} (BS){% else %}{{ today }}{% endif %}
+  </div>
+  <div class="table-responsive">
+    <table class="table table-bordered mb-0 align-middle" style="font-variant-numeric:tabular-nums;">
+      <thead class="table-light">
+        <tr>
+          <th>{% trans "Material" %}</th>
+          <th class="d-none d-sm-table-cell">{% trans "Depot" %}</th>
+          <th class="text-end">{% trans "On hand" %}</th>
+          <th>{% trans "Unit" %}</th>
+          <th class="text-end">{% trans "Reorder at" %}</th>
+          <th>{% trans "Status" %}</th>
+          <th class="text-end">{% trans "Value" %} ({{ currency }})</th>
+          <th class="dl-no-print"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr{% if r.status != 'ok' %} class="{% if r.status == 'low' %}table-warning{% else %}table-danger{% endif %}"{% endif %}>
+          <td class="fw-semibold">{{ r.material.name }}{% if r.material.category %}<div class="text-muted small">{{ r.material.category }}</div>{% endif %}
+            <div class="text-muted small fw-normal d-sm-none">{{ r.depot.name }}</div></td>
+          <td class="d-none d-sm-table-cell">{{ r.depot.name }}</td>
+          <td class="text-end fw-bold">{{ r.qty|floatformat:"-3" }}</td>
+          <td>{{ r.material.base_unit }}</td>
+          <td class="text-end">{% if r.material.reorder_level %}{{ r.material.reorder_level|floatformat:"-3" }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+          <td>
+            {% if r.status == 'ok' %}<span class="badge text-bg-success">{% trans "In stock" %}</span>
+            {% elif r.status == 'low' %}<span class="badge text-bg-warning">{% trans "Low" %}</span>
+            {% elif r.status == 'out' %}<span class="badge text-bg-danger">{% trans "Out of stock" %}</span>
+            {% else %}<span class="badge text-bg-dark" title="{% trans 'More was sold than recorded in stock — check purchases or post an adjustment.' %}">{% trans "Negative" %}</span>{% endif %}
+          </td>
+          <td class="text-end">{{ r.value|floatformat:2 }}</td>
+          <td class="dl-no-print text-nowrap">
+            <a class="btn btn-sm btn-outline-secondary" title="{% trans 'Movements' %}"
+               href="{% url 'inventory:stock_list' %}?depot={{ r.depot.pk }}&material={{ r.material.pk }}"><i class="bi bi-journal-text"></i></a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-4">
+          {% if show == 'alerts' %}{% trans "Nothing is low or out of stock." %}{% else %}{% trans "No stock recorded yet. Stock is added by purchases and stock adjustments." %}{% endif %}
+        </td></tr>
+        {% endfor %}
+      </tbody>
+      {% if rows %}
+      <tfoot class="table-light">
+        <tr>
+          <th colspan="6" class="text-end d-none d-sm-table-cell">{% if is_paginated %}{% trans "Total value, all pages (at purchase rate)" %}{% else %}{% trans "Total value (at purchase rate)" %}{% endif %}</th>
+          <th colspan="5" class="text-end d-sm-none">{% trans "Total value" %}</th>
+          <th class="text-end">{{ total_value|floatformat:2 }}</th>
+          <th class="dl-no-print"></th>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+{% pagination page_obj %}
+{% endblock %}

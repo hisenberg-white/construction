@@ -1,5 +1,5 @@
-<div class="d-flex justify-content-between align-items-start">
-  <div class="d-flex align-items-center gap-3">
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-start gap-3">
+  <div class="d-flex align-items-center gap-3 min-w-0">
     {% if company.logo %}<img src="{{ company.logo.url }}" alt="logo" class="dl-doc-logo">{% endif %}
     <div>
       <div class="dl-doc-company">{{ company.name|default:"DepotLedger" }}</div>
@@ -10,7 +10,7 @@
       </div>
     </div>
   </div>
-  <div class="text-end">
+  <div class="text-sm-end dl-doc-meta">
     {% if doc_title %}<div class="dl-doc-title">{{ doc_title }}</div>{% endif %}
     {% if doc_subtitle %}<div class="text-muted">{{ doc_subtitle }}</div>{% endif %}
     {% if qr %}

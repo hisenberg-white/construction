@@ -21,9 +21,11 @@ urlpatterns = [
         detail=views.DepotDetailView, update=views.DepotUpdateView,
         delete=views.DepotDeleteView,
     ),
-    # Tenant: company settings + per-tenant SMTP email settings.
+    # Tenant: company settings + per-tenant SMTP / SMS / WhatsApp settings.
     path('app/company-settings/', views.CompanySettingsView.as_view(), name='company_settings'),
     path('app/email-settings/', views.EmailConfigView.as_view(), name='email_settings'),
+    path('app/messaging-settings/', views.MessagingConfigView.as_view(),
+         name='messaging_settings'),
     # SaaS owner: choose which company to work in.
     path('app/set-company/', views.set_acting_company, name='set_company'),
 ]

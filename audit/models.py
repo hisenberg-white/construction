@@ -48,3 +48,13 @@ class AuditLog(TimeStampedModel):
 
     def __str__(self):
         return f'{self.get_action_display()} {self.model_name}#{self.object_id} by {self.user}'
+
+    ACTION_COLOURS = {
+        'create': 'success', 'update': 'primary', 'delete': 'danger',
+        'cancel': 'warning', 'payment': 'info', 'email': 'secondary',
+    }
+
+    @property
+    def colour(self):
+        """Bootstrap colour used for this action in the audit timeline."""
+        return self.ACTION_COLOURS.get(self.action, 'light')

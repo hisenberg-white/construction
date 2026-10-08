@@ -16,7 +16,7 @@ class MaterialItemForm(TenantModelForm):
     class Meta:
         model = MaterialItem
         fields = ['name', 'category', 'base_unit', 'default_purchase_rate',
-                  'default_sale_rate', 'stock_enabled', 'is_active']
+                  'default_sale_rate', 'reorder_level', 'stock_enabled', 'is_active']
 
 
 class ServiceItemForm(TenantModelForm):

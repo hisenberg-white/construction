@@ -138,3 +138,73 @@ class TenantEmailConfig(TimeStampedModel):
             username=self.username or None, password=self.password or None,
             use_tls=self.use_tls, use_ssl=self.use_ssl, fail_silently=False,
         )
+
+
+class TenantMessagingConfig(TimeStampedModel):
+    """Per-tenant SMS and WhatsApp gateway settings so invoices are sent from
+    the client's own sender ID / WhatsApp number (SRS FR-16)."""
+
+    class SMSProvider(models.TextChoices):
+        SPARROW = 'sparrow', 'Sparrow SMS'
+        AAKASH = 'aakash', 'Aakash SMS'
+        TWILIO = 'twilio', 'Twilio'
+
+    class WhatsAppProvider(models.TextChoices):
+        META = 'meta', 'WhatsApp Cloud API (Meta)'
+        TWILIO = 'twilio', 'Twilio'
+
+    tenant = models.OneToOneField(
+        TenantCompany, on_delete=models.CASCADE, related_name='messaging_config')
+    country_code = models.CharField(
+        'Default country code', max_length=5, default='977',
+        help_text='Added to local numbers for Twilio / WhatsApp, e.g. 977 for Nepal.')
+
+    # --- SMS ---
+    sms_enabled = models.BooleanField('Enable SMS', default=False)
+    sms_provider = models.CharField(
+        'SMS provider', max_length=10, choices=SMSProvider.choices,
+        default=SMSProvider.SPARROW)
+    sms_token = models.CharField(
+        'SMS API token', max_length=255, blank=True,
+        help_text='Sparrow/Aakash token, or the Twilio auth token.')
+    sms_account_sid = models.CharField(
+        'SMS account SID', max_length=100, blank=True, help_text='Twilio only.')
+    sms_sender = models.CharField(
+        'SMS sender', max_length=50, blank=True,
+        help_text='Sparrow "identity" or Twilio "from" number. Not used by Aakash.')
+
+    # --- WhatsApp ---
+    whatsapp_enabled = models.BooleanField('Enable WhatsApp', default=False)
+    whatsapp_provider = models.CharField(
+        'WhatsApp provider', max_length=10, choices=WhatsAppProvider.choices,
+        default=WhatsAppProvider.META)
+    whatsapp_token = models.CharField(
+        'WhatsApp access token', max_length=500, blank=True,
+        help_text='Meta permanent access token, or the Twilio auth token.')
+    whatsapp_account_sid = models.CharField(
+        'WhatsApp account SID', max_length=100, blank=True, help_text='Twilio only.')
+    whatsapp_sender = models.CharField(
+        'WhatsApp sender', max_length=50, blank=True,
+        help_text='Meta "phone number ID", or the Twilio WhatsApp number (e.g. +14155238886).')
+    whatsapp_template = models.CharField(
+        'WhatsApp template name', max_length=100, blank=True,
+        help_text='Meta only. Approved template with 4 body variables: customer, '
+                  'invoice no, amount, link. Leave blank to send plain text '
+                  '(Meta only delivers that within 24h of the customer\'s last message).')
+    whatsapp_template_language = models.CharField(
+        'Template language', max_length=10, default='en', blank=True)
+
+    class Meta:
+        verbose_name = 'SMS / WhatsApp configuration'
+        verbose_name_plural = 'SMS / WhatsApp configurations'
+
+    def __str__(self):
+        return f'SMS/WhatsApp for {self.tenant.name}'
+
+    @property
+    def sms_ready(self):
+        return self.sms_enabled and bool(self.sms_token)
+
+    @property
+    def whatsapp_ready(self):
+        return self.whatsapp_enabled and bool(self.whatsapp_token and self.whatsapp_sender)

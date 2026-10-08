@@ -61,6 +61,21 @@ class SubscriptionService:
 
     @staticmethod
     @transaction.atomic
+    def record_sms_usage(*, tenant, count=1):
+        """Count SMS sent this month in the tenant's usage row (SRS FR-18)."""
+        today = timezone.now().date()
+        period_start = today.replace(day=1)
+        period_end = today.replace(day=calendar.monthrange(today.year, today.month)[1])
+        usage, _ = SubscriptionUsage.objects.get_or_create(
+            tenant=tenant, period_start=period_start, period_end=period_end,
+            defaults={'invoice_count': 0, 'entry_count': 0, 'amount_due': Decimal('0')},
+        )
+        usage.sms_count += count
+        usage.save(update_fields=['sms_count', 'updated_at'])
+        return usage
+
+    @staticmethod
+    @transaction.atomic
     def refresh_status(tenant):
         """Recompute subscription_status from dates/grace period (SRS 8.2, 10.6)."""
         raise NotImplementedError('SubscriptionService.refresh_status — roadmap Phase 5')

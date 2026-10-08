@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import DepotLocation, TenantCompany, TenantEmailConfig
+from .models import DepotLocation, TenantCompany, TenantEmailConfig, TenantMessagingConfig
 
 
 class DepotInline(admin.TabularInline):
@@ -29,3 +29,11 @@ class TenantEmailConfigAdmin(admin.ModelAdmin):
     list_display = ('tenant', 'host', 'port', 'from_email', 'use_tls', 'is_active')
     list_filter = ('is_active', 'use_tls')
     search_fields = ('tenant__name', 'host', 'from_email')
+
+
+@admin.register(TenantMessagingConfig)
+class TenantMessagingConfigAdmin(admin.ModelAdmin):
+    list_display = ('tenant', 'sms_enabled', 'sms_provider',
+                    'whatsapp_enabled', 'whatsapp_provider')
+    list_filter = ('sms_enabled', 'sms_provider', 'whatsapp_enabled', 'whatsapp_provider')
+    search_fields = ('tenant__name', 'sms_sender', 'whatsapp_sender')

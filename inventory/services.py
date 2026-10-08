@@ -8,8 +8,9 @@ import json
 from decimal import Decimal
 
 from django.db import models, transaction
+from django.db.models import Sum
 
-from .models import StockLedger, Vehicle
+from .models import MaterialItem, StockLedger, Vehicle
 
 
 def vehicle_capacity_json(tenant):
@@ -41,6 +42,38 @@ IN_TYPES = {
 
 
 class StockService:
+    @staticmethod
+    def on_hand(tenant, depot=None):
+        """Current quantity per (depot_id, material_id) from all movements."""
+        qs = StockLedger.objects.for_tenant(tenant)
+        if depot is not None:
+            qs = qs.filter(depot=depot)
+        rows = qs.values('depot_id', 'material_id').annotate(i=Sum('qty_in'), o=Sum('qty_out'))
+        return {(r['depot_id'], r['material_id']): (r['i'] or 0) - (r['o'] or 0) for r in rows}
+
+    @staticmethod
+    def low_stock(tenant):
+        """Stock-tracked materials at/below their reorder level (or negative),
+        as a list of dicts, most serious first."""
+        from tenants.models import DepotLocation
+        balances = StockService.on_hand(tenant)
+        materials = MaterialItem.objects.for_tenant(tenant).filter(is_active=True, stock_enabled=True)
+        depots = DepotLocation.objects.filter(tenant=tenant, is_active=True)
+        alerts = []
+        for m in materials:
+            for d in depots:
+                qty = balances.get((d.pk, m.pk))
+                if qty is None and not m.reorder_level:
+                    continue  # never stocked here and no minimum set
+                qty = qty or Decimal('0')
+                if qty < 0 or (m.reorder_level and qty <= m.reorder_level):
+                    alerts.append({'material': m, 'depot': d, 'qty': qty,
+                                   'reorder_level': m.reorder_level,
+                                   'status': 'negative' if qty < 0 else ('out' if qty == 0 else 'low')})
+        severity = {'negative': 0, 'out': 1, 'low': 2}
+        alerts.sort(key=lambda a: (severity[a['status']], a['qty'] - a['reorder_level']))
+        return alerts
+
     @staticmethod
     def current_balance(tenant, depot, material):
         """Latest closing balance for a depot+material (0 if no movements)."""
