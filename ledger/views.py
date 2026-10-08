@@ -149,6 +149,53 @@ def _attach_account_names(entries):
             e.account_name = label
 
 
+def _net(qs):
+    """Debit − credit over ``qs`` (positive = they owe you)."""
+    agg = qs.aggregate(d=Sum('debit'), c=Sum('credit'))
+    return (agg['d'] or Decimal('0')) - (agg['c'] or Decimal('0'))
+
+
+def balance_status(name, amount):
+    """Plain-language reading of a party balance: (key, sentence)."""
+    if amount > 0:
+        return 'receive', f'{name} owes you'
+    if amount < 0:
+        return 'pay', f'You owe {name}'
+    return 'settled', 'Settled — nothing due'
+
+
+def outstanding_balances(tenant, as_of):
+    """Every customer / supplier / employee / vehicle account with a non-zero
+    balance on ``as_of``, biggest first, plus totals to receive and to pay."""
+    rows = (LedgerEntry.objects.for_tenant(tenant)
+            .filter(account_type__in=PARTY_ACCOUNT_MODELS, account_id__isnull=False,
+                    entry_date__lte=as_of)
+            .values('account_type', 'account_id')
+            .annotate(d=Sum('debit'), c=Sum('credit')))
+    balances = [(r['account_type'], r['account_id'], (r['d'] or 0) - (r['c'] or 0)) for r in rows]
+    balances = [b for b in balances if b[2]]
+    names = {}
+    for acc_type, model in PARTY_ACCOUNT_MODELS.items():
+        ids = {b[1] for b in balances if b[0] == acc_type}
+        if ids:
+            names[acc_type] = dict(model.objects.filter(pk__in=ids).values_list('pk', 'name'))
+    labels = dict(LedgerAccountType.choices)
+    out = []
+    for acc_type, acc_id, amount in sorted(balances, key=lambda b: -abs(b[2])):
+        out.append({
+            'name': names.get(acc_type, {}).get(acc_id, f'#{acc_id}'),
+            'type_label': labels.get(acc_type, acc_type),
+            'account': f'{acc_type}:{acc_id}',
+            'receive': amount if amount > 0 else 0,
+            'pay': -amount if amount < 0 else 0,
+        })
+    return {
+        'rows': out,
+        'total_receive': sum(r['receive'] for r in out),
+        'total_pay': sum(r['pay'] for r in out),
+    }
+
+
 class LedgerPaperView(TenantRequiredMixin, PermissionRequiredMixin, TemplateView):
     """Account ledger styled like a ledger book (SRS FR-14).
 
@@ -248,27 +295,45 @@ class LedgerPaperView(TenantRequiredMixin, PermissionRequiredMixin, TemplateView
                 qs = qs.filter(account_id=acc_id)
 
         # Opening balance carried forward from before the range (yearly reset).
-        opening = None
-        if single:
-            prior = qs.filter(entry_date__lt=date_from).order_by('-entry_date', '-id').first()
-            opening = prior.balance_after if prior else Decimal('0')
+        # Summed from the entries rather than read off a stored running balance,
+        # so back-dated payments / corrections can't skew it.
+        opening = _net(qs.filter(entry_date__lt=date_from)) if single else None
 
         rows = qs.filter(entry_date__gte=date_from, entry_date__lte=date_to).order_by('entry_date', 'id')
         totals = rows.aggregate(debit=Sum('debit'), credit=Sum('credit'))
+        total_debit, total_credit = totals['debit'] or 0, totals['credit'] or 0
+        if single:
+            closing = opening + total_debit - total_credit
+            summary = {'opening': opening, 'debit': total_debit, 'credit': total_credit,
+                       'closing': closing, 'party': acc_type in PARTY_ACCOUNT_MODELS}
+            if summary['party']:
+                name = account_label.split(': ', 1)[-1]
+                summary['status'], summary['sentence'] = balance_status(name, closing)
+                summary['amount'] = abs(closing)
+            context['summary'] = summary
+        else:
+            context['outstanding'] = outstanding_balances(self.request.tenant, date_to)
         page_obj, is_paginated = paginate(self.request, rows)
         _attach_account_names(page_obj.object_list)
         brought_forward = page_obj.number > 1
-        if single and brought_forward:
-            # Balance carried over from the last row of the previous page.
-            opening = rows[page_obj.start_index() - 2].balance_after
+        if single:
+            # Running balance computed from the entries (opening + Dr − Cr),
+            # carried over from earlier pages when paginated.
+            running = opening + sum(
+                (d - c) for d, c in rows[:page_obj.start_index() - 1].values_list('debit', 'credit'))
+            if brought_forward:
+                opening = running
+            for e in page_obj.object_list:
+                running += e.debit - e.credit
+                e.running_balance = running
         context.update({
             'entries': page_obj.object_list,
             'page_obj': page_obj, 'is_paginated': is_paginated,
             'brought_forward': brought_forward,
             'opening_balance': opening,
             'single_account': single,
-            'total_debit': totals['debit'] or 0,
-            'total_credit': totals['credit'] or 0,
+            'total_debit': total_debit,
+            'total_credit': total_credit,
         })
         return context
 

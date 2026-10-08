@@ -23,6 +23,18 @@ class SaleInvoiceForm(TenantModelForm):
                 'data-quick-add-label': 'Customer',
             })
 
+    def clean_invoice_no(self):
+        # The (tenant, invoice_no) constraint isn't checked by the form because
+        # tenant isn't a form field — check it here instead of crashing on save.
+        number = self.cleaned_data.get('invoice_no')
+        if number and self.tenant is not None:
+            clash = SaleInvoice.objects.filter(tenant=self.tenant, invoice_no=number)
+            if self.instance.pk:
+                clash = clash.exclude(pk=self.instance.pk)
+            if clash.exists():
+                raise forms.ValidationError('This invoice number is already used. Please enter a different one.')
+        return number
+
 
 class SaleInvoiceLineForm(TenantModelForm):
     class Meta:

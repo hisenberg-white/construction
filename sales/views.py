@@ -23,6 +23,7 @@ from core.crud import (
 )
 from core.constants import PaymentStatus
 from core.pdf import render_pdf_bytes
+from core.postings import sync_invoice
 from inventory.models import StockLedger
 from inventory.services import StockService, vehicle_capacity_json
 from ledger.forms import RecordPaymentForm
@@ -176,6 +177,9 @@ class _InvoiceFormMixin(TenantRequiredMixin, PermissionRequiredMixin, CrudContex
             _post_invoice_effects(invoice, self.request.user)
             # SaaS per-entry billing: each invoice is one billable entry (SRS FR-18).
             SubscriptionService.record_entry_usage(tenant=invoice.tenant, kind='invoice')
+        else:
+            # Edited: post corrections so ledger + stock match the new amounts.
+            sync_invoice(invoice, self.request.user)
         log_action(self.request, 'create' if self.posts_effects else 'update', instance=invoice)
         messages.success(self.request, f'Invoice {invoice.invoice_no} saved.')
         return redirect(self.crud_url_name('detail'), pk=invoice.pk)
@@ -194,7 +198,7 @@ class InvoiceCreateView(_InvoiceFormMixin, CreateView):
 
 class InvoiceUpdateView(_InvoiceFormMixin, UpdateView):
     permission_action = 'u'
-    posts_effects = False  # avoid double-posting stock on edit
+    posts_effects = False  # edits post only the difference (see sync_invoice)
 
 
 class InvoiceListView(CrudListView):

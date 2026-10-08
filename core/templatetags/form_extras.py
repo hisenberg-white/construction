@@ -35,3 +35,17 @@ def field_col(field):
 @register.filter
 def is_checkbox(field):
     return field.field.widget.__class__.__name__ in _BOOL
+
+
+@register.filter
+def drcr(value):
+    """Ledger balance as ``1,500.00 Dr`` / ``1,500.00 Cr`` instead of a signed
+    number (debit − credit: positive = Dr, negative = Cr)."""
+    from decimal import Decimal, InvalidOperation
+    try:
+        amount = Decimal(value)
+    except (InvalidOperation, TypeError, ValueError):
+        return value
+    if not amount:
+        return '0.00'
+    return f'{abs(amount):,.2f} {"Dr" if amount > 0 else "Cr"}'

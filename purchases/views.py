@@ -29,6 +29,7 @@ from core.crud import (
 )
 from core.constants import PaymentStatus
 from core.pdf import render_pdf_bytes
+from core.postings import sync_purchase
 from inventory.models import StockLedger
 from inventory.services import StockService, vehicle_capacity_json
 from ledger.forms import RecordPaymentForm
@@ -273,6 +274,9 @@ class _PurchaseFormMixin(TenantRequiredMixin, PermissionRequiredMixin, CrudConte
             _post_purchase_effects(purchase, self.request.user)
             # SaaS per-entry billing — purchases are billable entries too (FR-18).
             SubscriptionService.record_entry_usage(tenant=purchase.tenant, kind='purchase')
+        else:
+            # Edited: post corrections so ledger + stock match the new amounts.
+            sync_purchase(purchase, self.request.user)
         log_action(self.request, 'create' if self.posts_effects else 'update', instance=purchase)
         messages.success(self.request, 'Purchase saved.')
         return redirect(self.crud_url_name('detail'), pk=purchase.pk)
@@ -285,7 +289,7 @@ class PurchaseCreateView(_PurchaseFormMixin, CreateView):
 
 class PurchaseUpdateView(_PurchaseFormMixin, UpdateView):
     permission_action = 'u'
-    posts_effects = False  # avoid double-posting stock on edit
+    posts_effects = False  # edits post only the difference (see sync_purchase)
 
 
 class PurchaseCancelView(CrudCancelView):

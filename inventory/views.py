@@ -123,19 +123,42 @@ class StockLedgerBookView(TenantRequiredMixin, PermissionRequiredMixin, Template
             qs = qs.filter(material_id=int(material_id))
 
         single = depot_id.isdigit() and material_id.isdigit()
+        # Quantities are summed from the movements (In − Out) rather than read
+        # off a stored running balance, so they always add up.
         opening = None
         if single:
-            prior = qs.filter(created_at__date__lt=date_from).order_by('-created_at', '-id').first()
-            opening = prior.balance_after if prior else Decimal('0')
+            agg = qs.filter(created_at__date__lt=date_from).aggregate(i=Sum('qty_in'), o=Sum('qty_out'))
+            opening = (agg['i'] or Decimal('0')) - (agg['o'] or Decimal('0'))
 
-        rows = qs.filter(created_at__date__gte=date_from, created_at__date__lte=date_to) \
-                 .order_by('created_at', 'id')
+        rows = (qs.filter(created_at__date__gte=date_from, created_at__date__lte=date_to)
+                .order_by('created_at', 'id'))
         totals = rows.aggregate(i=Sum('qty_in'), o=Sum('qty_out'))
+        total_in, total_out = totals['i'] or Decimal('0'), totals['o'] or Decimal('0')
         page_obj, is_paginated = paginate(self.request, rows)
         brought_forward = page_obj.number > 1
-        if single and brought_forward:
-            # Balance carried over from the last row of the previous page.
-            opening = rows[page_obj.start_index() - 2].balance_after
+        if single:
+            material = MaterialItem.objects.filter(tenant=tenant, pk=int(material_id)).first()
+            context['stock_summary'] = {
+                'opening': opening, 'qty_in': total_in, 'qty_out': total_out,
+                'on_hand': opening + total_in - total_out,
+                'unit': material.base_unit if material else '',
+            }
+            # Running balance per row, carried over from earlier pages.
+            running = opening + sum(
+                (i - o) for i, o in rows[:page_obj.start_index() - 1].values_list('qty_in', 'qty_out'))
+            if brought_forward:
+                opening = running
+            for e in page_obj.object_list:
+                running += e.qty_in - e.qty_out
+                e.running_balance = running
+        else:
+            # On hand per depot + material for the current filter, as of date_to.
+            on_hand = (qs.filter(created_at__date__lte=date_to)
+                       .values('depot_id', 'material_id', 'depot__name',
+                               'material__name', 'material__base_unit')
+                       .annotate(i=Sum('qty_in'), o=Sum('qty_out'))
+                       .order_by('material__name', 'depot__name'))
+            context['on_hand_rows'] = [{**r, 'qty': (r['i'] or 0) - (r['o'] or 0)} for r in on_hand]
         context.update({
             'company': tenant,
             'entries': page_obj.object_list,
@@ -146,7 +169,7 @@ class StockLedgerBookView(TenantRequiredMixin, PermissionRequiredMixin, Template
             'materials': MaterialItem.objects.filter(tenant=tenant) if tenant else MaterialItem.objects.none(),
             'depot_id': depot_id, 'material_id': material_id,
             'single_account': single, 'opening_balance': opening,
-            'total_in': totals['i'] or 0, 'total_out': totals['o'] or 0,
+            'total_in': total_in, 'total_out': total_out,
             'can_adjust': permissions.has_perm(self.request.user, STOCK, 'c'),
         })
         return context
